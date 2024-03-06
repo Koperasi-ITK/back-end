@@ -1,4 +1,3 @@
-// File: models/transaksi.js
 'use strict';
 const { Model } = require('sequelize');
 

@@ -1,4 +1,3 @@
-// File: models/itemkeranjang.js
 'use strict';
 const { Model } = require('sequelize');
 

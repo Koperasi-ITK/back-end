@@ -1,4 +1,3 @@
-// File: models/saldo.js
 'use strict';
 const { Model } = require('sequelize');
 

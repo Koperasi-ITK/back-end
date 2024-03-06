@@ -1,4 +1,3 @@
-// File: models/gambarbarang.js
 'use strict';
 const { Model } = require('sequelize');
 

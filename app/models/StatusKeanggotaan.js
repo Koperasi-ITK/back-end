@@ -1,4 +1,3 @@
-// File: models/statuskeanggotaan.js
 'use strict';
 const { Model } = require('sequelize');
 
