@@ -1,17 +1,48 @@
 const Sequelize = require("sequelize");
+const dotEnv = require("dotenv");
+dotEnv.config();
 
-const config = {
-  username: "root",
-  password: "",
-  database: "koperasiitk",
-  host: "localhost",
-  dialect: "mysql",
+const { DB_USERNAME = "", DB_PASSWORD = "", DB_NAME = "", DB_HOST = "" } = process.env;
+
+const databaseValidation = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("Success connect to database");
+  } catch (err) {
+    console.error(`Unable to connect to the database: ${err}`);
+  }
 };
 
-const sequelize = new Sequelize(config.database, config.username, config.password, {
-  host: config.host,
-  dialect: config.dialect,
-  logging: console.log
-});
+module.exports = {
+  databaseValidation,
 
-module.exports = sequelize;
+  development: {
+    username: DB_USERNAME,
+    password: DB_PASSWORD,
+    database: `${DB_NAME}`,
+    host: DB_HOST,
+    dialect: "mysql",
+  },
+  test: {
+    username: DB_USERNAME,
+    password: DB_PASSWORD,
+    database: `${DB_NAME}_test`,
+    host: DB_HOST,
+    dialect: "mysql",
+  },
+  production: {
+    username: DB_USERNAME,
+    password: DB_PASSWORD,
+    database: `${DB_NAME}`,
+    host: DB_HOST,
+    dialect: "mysql",
+  },
+};
+
+// const sequelize = new Sequelize(config.database, config.username, config.password, {
+//   host: config.host,
+//   dialect: config.dialect,
+//   logging: console.log
+// });
+
+// module.exports = sequelize;

@@ -1,32 +1,36 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
+const utils = require("../../utils/utils");
 
 exports.verifyToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+  try {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader)
+      return res.status(401).json(utils.apiError("Silahkan login terlebih dahulu"));
 
-    if (token == null) return res.sendStatus(401);
+    const token = authHeader && authHeader.split(" ")[1];
+    if (!token)
+      return res.status(401).json(utils.apiError("Silahkan login terlebih dahulu"));
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
-        
-        req.user = user;
-        next();
-    });
-};
-
-exports.verifyRole = (roles) => (req, res, next) => {
-    try {
-      const token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      if (roles.includes(decoded.role)) {
-        req.user = decoded;
-        next();
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) {
+        if (err instanceof jwt.TokenExpiredError) {
+          return res
+            .status(401)
+            .json(utils.apiError("Token kedaluwarsa, silahkan login ulang"));
+        } else if (err instanceof jwt.JsonWebTokenError) {
+          return res
+            .status(401)
+            .json(utils.apiError("Token tidak valid. Silahkan login ulang"));
+        } else {
+          console.log(err);
+          return res.status(500).json(utils.apiError("Kesalahan pada internal server"));
+        }
       } else {
-        return res.status(403).json({ message: "Access denied" });
+        res.locals.user = decoded;
+        return next();
       }
-    } catch (error) {
-      return res.status(401).json({ message: "Authentication failed: invalid token" });
-    }
-  };
-  
+    });
+  } catch (error) {
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server"));
+  }
+};
