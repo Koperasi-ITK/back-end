@@ -8,9 +8,9 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      Saldo.belongsTo(models.User, {
-        foreignKey: "userId",
-      });
+      // Saldo.belongsTo(models.User, {
+      //   foreignKey: "userId",
+      // });
     }
   }
   Saldo.init(
