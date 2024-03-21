@@ -8,12 +8,21 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      itemKeranjang.belongsTo(models.Barang, {
+        foreignKey: 'barangId',
+      });
+      itemKeranjang.belongsTo(models.Keranjang, {
+        foreignKey: 'keranjangId',
+      });
     }
   }
   itemKeranjang.init(
     {
       barangId: DataTypes.INTEGER,
+      keranjangId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
       jumlah: DataTypes.INTEGER,
     },
     {

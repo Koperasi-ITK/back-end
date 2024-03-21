@@ -8,22 +8,22 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // Transaksi.belongsTo(models.User, {
-      //   foreignKey: "userId",
-      // });
-      // Transaksi.belongsTo(models.metodePengiriman, {
-      //   foreignKey: "metodePengirimanId",
-      //   allowNull: false,
-      // });
-      // Transaksi.belongsTo(models.statusPengiriman, {
-      //   foreignKey: "statusPengirimanId",
-      //   allowNull: false,
-      // });
-      // Transaksi.belongsToMany(models.Barang, {
-      //   through: models.detailTransaksi,
-      //   foreignKey: "transaksiId",
-      //   otherKey: "barangId",
-      // });
+      Transaksi.belongsTo(models.User, {
+        foreignKey: "userId",
+      });
+      Transaksi.belongsTo(models.metodePengiriman, {
+        foreignKey: "metodePengirimanId",
+        allowNull: false,
+      });
+      Transaksi.belongsTo(models.statusPengiriman, {
+        foreignKey: "statusPengirimanId",
+        allowNull: false,
+      });
+      Transaksi.belongsToMany(models.Barang, {
+        through: models.detailTransaksi,
+        foreignKey: "transaksiId",
+        otherKey: "barangId",
+      });
     }
   }
   Transaksi.init(
