@@ -1,26 +1,27 @@
-"use strict";
-const { Model } = require("sequelize");
+'use strict';
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  class statusStok extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
+  class StatusStok extends Model {
     static associate(models) {
-      // statusStok.hasMany(models.Barang, {
-      //   foreignKey: "statusStokId",
-      // });
+      StatusStok.belongsToMany(models.Barang, { through: 'BarangStatusStok', foreignKey: 'status_stok_id' });
     }
   }
-  statusStok.init(
-    {
-      statusStok: DataTypes.STRING,
+
+  StatusStok.init({
+    status_stok_id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false
     },
-    {
-      sequelize,
-      modelName: "statusStok",
-    }
-  );
-  return statusStok;
+    status_stok_name: DataTypes.STRING
+  }, {
+    sequelize,
+    modelName: 'StatusStok',
+    tableName: 'statusstok',
+    timestamps: false
+  });
+
+  return StatusStok;
 };

@@ -1,29 +1,22 @@
-"use strict";
-const { Model } = require("sequelize");
+'use strict';
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Saldo extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // Saldo.belongsTo(models.User, {
-      //   foreignKey: "userId",
-      // });
+      Saldo.belongsTo(models.Users, { foreignKey: 'user_id' });
     }
   }
-  Saldo.init(
-    {
-      userId: DataTypes.INTEGER,
-      saldoIuranWajib: DataTypes.INTEGER,
-      saldoIuranSukarela: DataTypes.INTEGER,
-      saldoPenjualan: DataTypes.INTEGER,
-    },
-    {
-      sequelize,
-      modelName: "Saldo",
-    }
-  );
+  Saldo.init({
+    user_id: { type: DataTypes.INTEGER, primaryKey: true },
+    saldo_iuran_wajib: DataTypes.DECIMAL(10, 2),
+    saldo_iuran_sukarela: DataTypes.DECIMAL(10, 2),
+    saldo_penjualan: DataTypes.DECIMAL(10, 2),
+  }, {
+    sequelize,
+    modelName: 'Saldo',
+    tableName: 'saldo',
+    timestamps: false
+  });
   return Saldo;
 };

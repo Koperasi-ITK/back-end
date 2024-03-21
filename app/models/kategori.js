@@ -1,29 +1,21 @@
-"use strict";
-const { Model } = require("sequelize");
+'use strict';
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Kategori extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // Kategori.hasMany(models.Barang, {
-      //   foreignKey: "kategoriId",
-      //   allowNull: false,
-      // });
+      Kategori.hasMany(models.Barang, { foreignKey: 'kategori_id' });
     }
   }
-  Kategori.init(
-    {
-      namaKategori: DataTypes.STRING,
-      image: DataTypes.STRING,
-      potonganHarga: DataTypes.INTEGER,
-    },
-    {
-      sequelize,
-      modelName: "Kategori",
-    }
-  );
+  Kategori.init({
+    kategori_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    nama: { type: DataTypes.STRING, unique: true },
+    potongan_penjualan: DataTypes.DECIMAL(10, 2),
+  }, {
+    sequelize,
+    modelName: 'Kategori',
+    tableName: 'kategori',
+    timestamps: false
+  });
   return Kategori;
 };
