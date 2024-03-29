@@ -43,28 +43,34 @@ exports.tambahBarang = async (req, res) => {
 
 exports.hapusBarang = async (req, res) => {
     try {
-      const barangId = req.params.id;
-      const userId = res.locals.user.id;
-      const barang = await Barang.findByPk(barangId);
-  
-      if (!barang) {
-        return res.status(404).json(utils.apiError("Barang tidak ditemukan"));
-      }
-      if (barang.userId !== userId) {
-        return res.status(403).json(utils.apiError("Hanya pemilik barang yang dapat menghapus barang ini"));
-      }
-      await Barang.destroy({
-        where: {
-          id: barangId
+        const barangId = req.params.id;
+        const userId = res.locals.user.id;
+        const barang = await Barang.findByPk(barangId);
+
+        if (!barang) {
+            return res.status(404).json(utils.apiError("Barang tidak ditemukan"));
         }
-      });
-  
-      res.status(200).json(utils.apiSuccess("Barang berhasil dihapus"));
+        if (barang.userId !== userId) {
+            return res.status(403).json(utils.apiError("Hanya pemilik barang yang dapat menghapus barang ini"));
+        }
+        const urlGambar = barang.urlGambar;
+        const namaFile = urlGambar.substring(urlGambar.lastIndexOf('/') + 1);
+        const imageDeleteSuccess = await ImageKitFile.delete(namaFile);
+        if (!imageDeleteSuccess) {
+            return res.status(500).json(utils.apiError("Gagal menghapus gambar"));
+        }
+        await Barang.destroy({
+            where: {
+                id: barangId
+            }
+        });
+
+        res.status(200).json(utils.apiSuccess("Barang dan gambar berhasil dihapus"));
     } catch (error) {
-      console.log(error);
-      res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+        console.log(error);
+        res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
     }
-  };
+};
 
 exports.getSemuaBarang = async (req, res) => {
     try {
@@ -105,6 +111,31 @@ exports.getBarangPenjual = async (req, res) => {
             ]
         });
         res.status(200).json(utils.apiSuccess(`Barang dijual oleh penjual dengan ID: ${userId} berhasil diambil`, barangPenjual));
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+    }
+};
+
+exports.editJumlahBarang = async (req, res) => {
+    try {
+        const barangId = req.params.id;
+        const { stok } = req.body;
+        const userId = res.locals.user.id;
+        const barang = await Barang.findOne({
+            where: {
+                id: barangId,
+                userId: userId
+            }
+        });
+
+        if (!barang) {
+            return res.status(404).json(utils.apiError("Barang tidak ditemukan atau Anda tidak memiliki hak untuk mengedit barang ini."));
+        }
+        barang.stok = stok;
+        await barang.save();
+
+        res.status(200).json(utils.apiSuccess("Jumlah stok barang berhasil diperbarui", barang));
     } catch (error) {
         console.log(error);
         res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
