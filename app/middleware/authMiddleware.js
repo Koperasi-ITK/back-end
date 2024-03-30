@@ -34,3 +34,5 @@ exports.verifyToken = (req, res, next) => {
     return res.status(500).json(utils.apiError("Kesalahan pada internal server"));
   }
 };
+
+
