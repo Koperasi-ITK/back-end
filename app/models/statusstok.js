@@ -4,13 +4,9 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class StatusStok extends Model {
     static associate(models) {
-<<<<<<< HEAD
-      StatusStok.belongsToMany(models.Barang, { through: 'BarangStatusStok', foreignKey: 'status_stok_id' });
-=======
       statusStok.hasMany(models.Barang, {
         foreignKey: "statusStokId",
       });
->>>>>>> 4f3ddd2cef7fa767eee0635fdefba02e375de626
     }
   }
 
