@@ -12,12 +12,6 @@ module.exports = (sequelize, DataTypes) => {
 
   statusStok.init(
     {
-      status_stok_id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-        allowNull: false,
-      },
       status_stok_name: DataTypes.STRING,
     },
     {
