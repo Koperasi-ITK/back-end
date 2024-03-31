@@ -1,5 +1,5 @@
-'use strict';
-const { Model } = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
   class Barang extends Model {
@@ -22,18 +22,22 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
-  Barang.init({
-    barang_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    kategori_id: DataTypes.INTEGER,
-    nama: DataTypes.STRING,
-    harga: DataTypes.DECIMAL(10, 2),
-    stok: DataTypes.INTEGER,
-    user_id: DataTypes.INTEGER,
-  }, {
-    sequelize,
-    modelName: 'Barang',
-    tableName: 'barang',
-    timestamps: false
-  });
+  Barang.init(
+    {
+      kategoriId: DataTypes.INTEGER,
+      userId: DataTypes.INTEGER,
+      statusStokId: DataTypes.INTEGER,
+      nama: DataTypes.STRING,
+      harga: DataTypes.INTEGER,
+      stok: DataTypes.INTEGER,
+      urlGambar: DataTypes.STRING,
+    },
+    {
+      sequelize,
+      modelName: "Barang",
+      tableName: "barang",
+      timestamps: false,
+    }
+  );
   return Barang;
 };
