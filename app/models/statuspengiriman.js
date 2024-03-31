@@ -1,24 +1,22 @@
-'use strict';
-const { Model } = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-  class StatusPengiriman extends Model {
+  class statusPengiriman extends Model {
     static associate(models) {
-      StatusPengiriman.belongsToMany(models.Transaksi, {
-        through: 'TransaksiStatusPengiriman',
-        foreignKey: 'status_pengiriman_id',
-        otherKey: 'transaksi_id'
+      statusPengiriman.hasMany(models.Transaksi, {
+        foreignKey: "statusPengirimanId",
       });
     }
   }
-  StatusPengiriman.init({
-    status_pengiriman_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    status_pengiriman_name: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'StatusPengiriman',
-    tableName: 'statuspengiriman',
-    timestamps: false
-  });
-  return StatusPengiriman;
+  statusPengiriman.init(
+    {
+      statusPengirimanName: DataTypes.STRING,
+    },
+    {
+      sequelize,
+      modelName: "StatusPengiriman",
+    }
+  );
+  return statusPengiriman;
 };
