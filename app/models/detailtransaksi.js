@@ -4,8 +4,12 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class DetailTransaksi extends Model {
     static associate(models) {
-      DetailTransaksi.belongsTo(models.Transaksi, { foreignKey: 'transaksi_id' });
-      DetailTransaksi.belongsTo(models.Barang, { foreignKey: 'barang_id' });
+      detailTransaksi.belongsTo(models.Transaksi, {
+        foreignKey: "transaksiId",
+      });
+      detailTransaksi.belongsTo(models.Barang, {
+        foreignKey: "barangId",
+      });
     }
   }
   DetailTransaksi.init({

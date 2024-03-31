@@ -1,22 +1,30 @@
-'use strict';
-const { Model } = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-  class ItemKeranjang extends Model {
+  class itemKeranjang extends Model {
     static associate(models) {
-      ItemKeranjang.belongsTo(models.Keranjang, { foreignKey: 'keranjang_id' });
-      ItemKeranjang.belongsTo(models.Barang, { foreignKey: 'barang_id' });
+      itemKeranjang.belongsTo(models.Barang, {
+        foreignKey: "barangId",
+      });
+      itemKeranjang.belongsTo(models.Keranjang, {
+        foreignKey: "keranjangId",
+      });
     }
   }
-  ItemKeranjang.init({
-    keranjang_id: { type: DataTypes.INTEGER, primaryKey: true, allowNull: false },
-    barang_id: { type: DataTypes.INTEGER, primaryKey: true, allowNull: false },
-    jumlah: DataTypes.INTEGER
-  }, {
-    sequelize,
-    modelName: 'ItemKeranjang',
-    tableName: 'itemkeranjang',
-    timestamps: false
-  });
-  return ItemKeranjang;
+  itemKeranjang.init(
+    {
+      barangId: DataTypes.INTEGER,
+      keranjangId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      jumlah: DataTypes.INTEGER,
+    },
+    {
+      sequelize,
+      modelName: "itemKeranjang",
+    }
+  );
+  return itemKeranjang;
 };

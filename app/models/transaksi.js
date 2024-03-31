@@ -4,6 +4,7 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Transaksi extends Model {
     static associate(models) {
+<<<<<<< HEAD
       Transaksi.belongsTo(models.Users, { foreignKey: 'user_id' });
       Transaksi.belongsToMany(models.StatusPengiriman, {
         through: 'TransaksiStatusPengiriman',
@@ -19,6 +20,23 @@ module.exports = (sequelize, DataTypes) => {
         through: models.DetailTransaksi,
         foreignKey: 'transaksi_id',
         otherKey: 'barang_id'
+=======
+      Transaksi.belongsTo(models.User, {
+        foreignKey: "userId",
+      });
+      Transaksi.belongsTo(models.metodePengiriman, {
+        foreignKey: "metodePengirimanId",
+        allowNull: false,
+      });
+      Transaksi.belongsTo(models.statusPengiriman, {
+        foreignKey: "statusPengirimanId",
+        allowNull: false,
+      });
+      Transaksi.belongsToMany(models.Barang, {
+        through: models.detailTransaksi,
+        foreignKey: "transaksiId",
+        otherKey: "barangId",
+>>>>>>> 4f3ddd2cef7fa767eee0635fdefba02e375de626
       });
     }
   }

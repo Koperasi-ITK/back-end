@@ -4,7 +4,9 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Saldo extends Model {
     static associate(models) {
-      Saldo.belongsTo(models.Users, { foreignKey: 'user_id' });
+      Saldo.belongsTo(models.User, {
+        foreignKey: "userId",
+      });
     }
   }
   Saldo.init({
