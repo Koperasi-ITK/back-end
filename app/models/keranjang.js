@@ -10,11 +10,15 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      Keranjang.belongsTo(models.User, {
+        foreignKey: 'userId',
+      });
+      Keranjang.hasMany(models.itemKeranjang, {
+        foreignKey: 'keranjangId',
+      });
     }
   }
   Keranjang.init({
-    keranjangId: DataTypes.INTEGER,
     userId: DataTypes.INTEGER
   }, {
     sequelize,
