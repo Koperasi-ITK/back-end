@@ -7,6 +7,7 @@ router.post("/register", authController.register);
 router.post("/login", authController.login);
 
 router.get("/user", verifyToken, userController.getUser);
+router.get("/aktor", verifyToken, userController.getUserByRole);
 router.get("/profile", verifyToken, userController.getProfile);
 
 // router.get("/profile", verifyToken, userController.getUserProfile);

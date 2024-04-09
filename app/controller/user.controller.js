@@ -1,7 +1,8 @@
 const { compareSync } = require("bcrypt");
 const utils = require("../../utils/utils");
-const { User } = require("../models");
+const { User, Role } = require("../models");
 const { where } = require("sequelize");
+const filter = require("../../utils/filter");
 
 const getUser = async (req, res, next) => {
   try {
@@ -49,8 +50,6 @@ const changePassword = async (req, res, next) => {
 
     const user = await User.findByPk(userId);
 
-
-
     if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
 
     if (user.password) {
@@ -78,8 +77,39 @@ const changePassword = async (req, res, next) => {
   }
 };
 
+const getUserByRole = async (req, res) => {
+  try {
+    let { page = 1, limit = 20, role } = req.query;
+
+    console.log(role);
+
+    let pages = (page - 1) * limit;
+
+    const roleInfo = await Role.findOne({
+      where: {
+        roleName: role,
+      },
+    });
+
+    if (!roleInfo) return res.status(404).json(utils.apiError("Role Tidak Ditemukan"));
+
+    const users = await User.findAndCountAll({
+      where: {
+        roleId: roleInfo.id,
+      },
+      limit: limit,
+      pages: pages,
+    });
+
+    return res.status(200).json(utils.apiSuccess("Data user ditemukan", users));
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 module.exports = {
   getUser,
   getProfile,
   changePassword,
+  getUserByRole,
 };
