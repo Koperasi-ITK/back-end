@@ -1,8 +1,9 @@
 const { compareSync } = require("bcrypt");
 const utils = require("../../utils/utils");
-const { User, Role } = require("../models");
+const { User, Role, Saldo, statusAnggota } = require("../models");
 const { where } = require("sequelize");
 const filter = require("../../utils/filter");
+const statusanggota = require("../models/statusanggota");
 
 const getUser = async (req, res, next) => {
   try {
@@ -43,47 +44,9 @@ const getProfile = async (req, res) => {
   }
 };
 
-const changePassword = async (req, res, next) => {
-  try {
-    const userId = res.locals.user.id;
-    const { oldPassword, newPassword } = req.body;
-
-    const user = await User.findByPk(userId);
-
-    if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
-
-    if (user.password) {
-      const verifyOldPassword = await utils.verifyHashData(oldPassword, user.password);
-
-      if (!verifyOldPassword)
-        return res.status(409).json(utils.apiError("Password lama salah"));
-    }
-
-    const hashPassword = await utils.createHashData(newPassword);
-
-    await User.update(
-      { password: hashPassword },
-      {
-        where: {
-          id: user.id,
-        },
-      }
-    );
-
-    return res.status(200).json(utils.apiSuccess("profile berhasil diperbaharui"));
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
-  }
-};
-
 const getUserByRole = async (req, res) => {
   try {
     let { page = 1, limit = 20, role } = req.query;
-
-    console.log(role);
-
-    let pages = (page - 1) * limit;
 
     const roleInfo = await Role.findOne({
       where: {
@@ -91,25 +54,84 @@ const getUserByRole = async (req, res) => {
       },
     });
 
-    if (!roleInfo) return res.status(404).json(utils.apiError("Role Tidak Ditemukan"));
+    if (!roleInfo)
+      return res.status(404).json(utils.apiError(`Role ${role} Tidak Ditemukan`));
 
-    const users = await User.findAndCountAll({
+    const totalCount = await User.count({
       where: {
         roleId: roleInfo.id,
       },
-      limit: limit,
-      pages: pages,
     });
 
-    return res.status(200).json(utils.apiSuccess("Data user ditemukan", users));
+    let pages = (page - 1) * limit;
+    const data = await User.findAll({
+      where: {
+        roleId: roleInfo.id,
+      },
+      include: [
+        {
+          model: statusAnggota,
+          attributes: ["statusName"],
+        },
+        {
+          model: Role,
+          attributes: ["roleName"],
+        },
+        {
+          model: Saldo,
+          attributes: ["saldoIuranWajib", "saldoIuranSukarela", "saldoPenjualan"],
+        },
+      ],
+      limit: limit,
+      offset: pages,
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return res
+      .status(200)
+      .json(utils.apiSuccess(`Data ${role} ditemukan`, { totalPages, data }));
   } catch (error) {
     console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOne({
+      where: {
+        id: id,
+      },
+    });
+
+    if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
+
+    const role = await Role.findOne({
+      where: {
+        id: user.roleId,
+      },
+    });
+
+    await User.destroy({
+      where: {
+        id: id,
+      },
+    });
+
+    return res.status(201).json(utils.apiSuccess(`Berhasil Menghapus ${role.roleName}`));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
   }
 };
 
 module.exports = {
   getUser,
   getProfile,
-  changePassword,
   getUserByRole,
+  deleteUser,
 };
