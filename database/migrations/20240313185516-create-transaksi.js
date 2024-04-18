@@ -21,6 +21,10 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
       },
+      totalHarga: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
       waktuPengambilan: {
         type: Sequelize.DATE,
       },
