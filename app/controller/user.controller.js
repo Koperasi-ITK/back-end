@@ -46,7 +46,9 @@ const getProfile = async (req, res) => {
 
 const getUserByRole = async (req, res) => {
   try {
-    let { page = 1, limit = 20, role } = req.query;
+    let { page, limit = 2, role } = req.query;
+
+    console.log(role);
 
     const roleInfo = await Role.findOne({
       where: {
