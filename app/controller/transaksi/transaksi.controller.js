@@ -1,6 +1,7 @@
 const {Keranjang,itemKeranjang,Barang,Transaksi,detailTransaksi,User,Saldo,metodePengiriman, statusPengiriman} = require("../../models");
 const utils = require("../../../utils/utils");
-  
+const { Op } = require('sequelize');
+
 exports.checkout = async (req, res) => {
     const userId = res.locals.user.id;
     const { metodePengirimanName, alamatPengiriman, waktuPengambilan } = req.body;
@@ -106,6 +107,7 @@ exports.cancelCheckout = async (req, res) => {
       saldo.saldoIuranSukarela += totalRefund;
       await saldo.save();
 
+      // kalau mau destroy di detail transaksi
       await detailTransaksi.destroy({
         where: { transaksiId: transaksi.id }
       });
@@ -119,4 +121,41 @@ exports.cancelCheckout = async (req, res) => {
   }
 };
 
-  
+exports.getTransaksi = async (req, res) => {
+  const userId = res.locals.user.id;
+  const { statusPengiriman: statusPengirimanId, transaksiId } = req.params;
+
+  try {
+      const transactions = await Transaksi.findAll({
+          where: { userId, ...(transaksiId && { id: transaksiId }) },
+          attributes: ['totalHarga', 'alamatPengiriman', 'waktuPengambilan'],
+          include: [
+              {
+                  model: detailTransaksi,
+                  include: [{
+                      model: Barang,
+                      attributes: ['nama', 'harga']
+                  }],
+                  attributes: ['jumlah', 'hargaItem', 'totalHarga']
+              },
+              {
+                  model: statusPengiriman,
+                  attributes: ['statusPengirimanName'],
+                  where: { id: statusPengirimanId ? statusPengirimanId : { [Op.not]: 12 } }
+              },
+              {
+                  model: metodePengiriman,
+                  attributes: ['metodePengirimanName']
+              }
+          ]
+      });
+
+      if (!transactions.length) {
+          return res.status(404).json({ message: "Tidak ada Transaksi" });
+      }
+      return res.status(200).json({ status: 'success', message: "Transaksi Ditemukan.", data: transactions });
+  } catch (error) {
+      console.error(error);
+      return res.status(500).json({ status: 'error', message: "An error occurred while retrieving transactions.", errors: { error: error.message } });
+  }
+};

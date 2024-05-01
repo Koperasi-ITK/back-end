@@ -117,25 +117,80 @@ exports.getBarangPenjual = async (req, res) => {
     }
 };
 
-exports.editJumlahBarang = async (req, res) => {
+// exports.editJumlahBarang = async (req, res) => {
+//     try {
+//         const barangId = req.params.id;
+//         const { stok } = req.body;
+//         const userId = res.locals.user.id;
+//         const barang = await Barang.findOne({
+//             where: {
+//                 id: barangId,
+//                 userId: userId
+//             }
+//         });
+
+//         if (!barang) {
+//             return res.status(404).json(utils.apiError("Barang tidak ditemukan atau Anda tidak memiliki hak untuk mengedit barang ini."));
+//         }
+//         barang.stok = stok;
+//         await barang.save();
+
+//         res.status(200).json(utils.apiSuccess("Jumlah stok barang berhasil diperbarui", barang));
+//     } catch (error) {
+//         console.log(error);
+//         res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+//     }
+// };
+
+exports.editBarang = async (req, res) => {
     try {
         const barangId = req.params.id;
-        const { stok } = req.body;
+        const { nama, harga, stok, kategoriId, statusStokId } = req.body;
         const userId = res.locals.user.id;
+        const image = req.file;
         const barang = await Barang.findOne({
             where: {
                 id: barangId,
                 userId: userId
             }
+            
         });
-
         if (!barang) {
             return res.status(404).json(utils.apiError("Barang tidak ditemukan atau Anda tidak memiliki hak untuk mengedit barang ini."));
         }
-        barang.stok = stok;
-        await barang.save();
 
-        res.status(200).json(utils.apiSuccess("Jumlah stok barang berhasil diperbarui", barang));
+        if (image) {
+            const namaFile = barang.urlGambar.substring(barang.urlGambar.lastIndexOf('/') + 1);
+            const imageDeleteSuccess = await ImageKitFile.delete(namaFile);
+
+            if (!imageDeleteSuccess) {
+                return res.status(500).json(utils.apiError("Gagal menghapus gambar"));
+            }
+
+            const allowedMimes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+            const allowedSizeMb = 2;
+    
+            if (!allowedMimes.includes(image.mimetype))
+                return res.status(409).json(utils.apiError("Format gambar tidak diperbolehkan"));
+    
+            if (image.size / (1024 * 1024) > allowedSizeMb)
+                return res.status(409).json(utils.apiError("Gambar tidak boleh lebih dari 2mb"));
+
+            const uploadFile = await ImageKitFile.upload(image);
+            
+            if (!uploadFile) {
+                return res.status(409).json(utils.apiError("Gagal mengupload gambar"));
+            }
+
+            barang.urlGambar = uploadFile.url;
+        }
+        if (nama !== undefined) barang.nama = nama;
+        if (harga !== undefined) barang.harga = harga;
+        if (stok !== undefined) barang.stok = stok;
+        if (kategoriId !== undefined) barang.kategoriId = kategoriId;
+        if (statusStokId !== undefined) barang.statusStokId = statusStokId;
+        await barang.save();
+        res.status(200).json(utils.apiSuccess("Barang berhasil diperbarui", barang));
     } catch (error) {
         console.log(error);
         res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
