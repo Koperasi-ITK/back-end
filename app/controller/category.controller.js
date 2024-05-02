@@ -1,6 +1,7 @@
 const utils = require("../../utils/utils");
 const ImageKitFile = require("../../utils/ImageKit");
 const { Kategori } = require("../models");
+const { where } = require("sequelize");
 
 const createCategory = async (req, res) => {
   try {
@@ -31,8 +32,6 @@ const createCategory = async (req, res) => {
       image: uploadFile.url,
       potonganHarga: potonganHarga,
     });
-
-    console.log(uploadFile.url);
 
     return res.status(200).json(utils.apiSuccess("Berhasil menambah kategori"));
   } catch (error) {
@@ -65,9 +64,9 @@ const deleteCategory = async (req, res) => {
     if (!checkCategory)
       return res.status(404).json(utils.apiError("Kategori tidak di temukan"));
 
-    // console.log(checkCategory);
-
-    const deleteFile = await ImageKitFile.delete(checkCategory.image);
+    const image = checkCategory.image;
+    const nameFile = image.substring(image.lastIndexOf("/") + 1);
+    const deleteFile = await ImageKitFile.delete(nameFile);
 
     if (!deleteFile) return res.status(500).json(utils.apiError("Gagal Menghapus File"));
 
@@ -86,24 +85,35 @@ const deleteCategory = async (req, res) => {
 
 const updateCategory = async (req, res) => {
   try {
-    const id = res.locals.user.id;
+    const { id } = req.params;
+    const { namaKategori, potonganHarga } = req.body;
+    const image = req.file;
 
-    const checkCategory = await Kategori.findByPk(id);
+    console.log(namaKategori, potonganHarga, image);
+
+    const checkCategory = await Kategori.findOne({
+      where: {
+        id: id,
+      },
+    });
+
+    // console.log(checkCategory.image);
 
     if (!checkCategory)
       return res.status(404).json(utils.apiError("Kategori tidak ditemukan"));
-
-    const image = req.file;
 
     const allowedMimes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
     const allowedSizeMb = 2;
 
     let imageUrl = null;
+    let imageFileName = null;
 
     if (typeof image === "undefined") {
-      imageUrl = checkCategory.imageUrl;
-      imageFileName = checkCategory.imageFileName;
+      imageUrl = checkCategory.image;
+      imageFileName = checkCategory.image.substring(
+        checkCategory.image.lastIndexOf("/") + 1
+      );
     } else {
       if (!allowedMimes.includes(image.mimetype))
         return res.status(409).json(utils.apiError("Format gambar tidak diperbolehkan"));
@@ -113,8 +123,8 @@ const updateCategory = async (req, res) => {
           .status(409)
           .json(utils.apiError("Gambar kelas tidak boleh lebih dari 2mb"));
 
-      if (checkCategory.imageFileName != null) {
-        const deleteFile = await ImageKitFile.delete(checkCategory.image);
+      if (checkCategory.image != null) {
+        const deleteFile = await ImageKitFile.delete(checkCategory.imageFileName);
         if (!deleteFile)
           return res.status(500).json(utils.apiError("Kesalahan pada internal server"));
       }
@@ -127,9 +137,6 @@ const updateCategory = async (req, res) => {
       imageUrl = uploadFile.url;
       imageFileName = uploadFile.name;
     }
-    const { namaKategori, potonganHarga } = req.body;
-
-    console.log(namaKategori, potonganHarga);
 
     const checkName = await Kategori.findOne({
       where: {

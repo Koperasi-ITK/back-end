@@ -4,7 +4,23 @@ dotEnv.config();
 
 const { DB_USERNAME = "", DB_PASSWORD = "", DB_NAME = "", DB_HOST = "" } = process.env;
 
+const databaseValidation = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("Success connect to database");
+  } catch (err) {
+    console.error(`Unable to connect to the database: ${err}`);
+  }
+};
+
+const sequelize = new Sequelize(`${DB_NAME}_development`, DB_USERNAME, DB_PASSWORD, {
+  host: DB_HOST,
+  dialect: "mysql",
+  logging: false,
+});
+
 module.exports = {
+  databaseValidation,
   development: {
     username: DB_USERNAME,
     password: DB_PASSWORD,
@@ -27,11 +43,3 @@ module.exports = {
     dialect: "mysql",
   },
 };
-
-// const sequelize = new Sequelize(config.database, config.username, config.password, {
-//   host: config.host,
-//   dialect: config.dialect,
-//   logging: console.log
-// });
-
-// module.exports = sequelize;

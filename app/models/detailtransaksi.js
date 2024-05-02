@@ -17,12 +17,15 @@ module.exports = (sequelize, DataTypes) => {
       transaksiId: DataTypes.INTEGER,
       barangId: DataTypes.INTEGER,
       jumlah: DataTypes.INTEGER,
-      hargItem: DataTypes.INTEGER,
+      hargaItem: DataTypes.INTEGER,
       totalHarga: DataTypes.INTEGER,
     },
     {
       sequelize,
       modelName: "detailTransaksi",
+      timestamps: true,
+      createdAt: "createdAt",
+      updatedAt: "updatedAt",
     }
   );
   return detailTransaksi;
