@@ -21,7 +21,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
       },
-      hargItem: {
+      hargaItem: {
         type: Sequelize.INTEGER,
         allowNull: false,
       },
