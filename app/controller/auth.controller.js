@@ -89,7 +89,42 @@ const login = async (req, res, next) => {
   }
 };
 
+const changePassword = async (req, res, next) => {
+  try {
+    const userId = res.locals.user.id;
+    const { oldPassword, newPassword } = req.body;
+
+    const user = await User.findByPk(userId);
+
+    if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
+
+    if (user.password) {
+      const verifyOldPassword = await utils.verifyHashData(oldPassword, user.password);
+
+      if (!verifyOldPassword)
+        return res.status(409).json(utils.apiError("Password lama salah"));
+    }
+
+    const hashPassword = await utils.createHashData(newPassword);
+
+    await User.update(
+      { password: hashPassword },
+      {
+        where: {
+          id: user.id,
+        },
+      }
+    );
+
+    return res.status(200).json(utils.apiSuccess("profile berhasil diperbaharui"));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+  }
+};
+
 module.exports = {
   register,
   login,
+  changePassword
 };

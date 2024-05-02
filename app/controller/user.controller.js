@@ -1,7 +1,9 @@
 const { compareSync } = require("bcrypt");
 const utils = require("../../utils/utils");
-const { User } = require("../models");
+const { User, Role, Saldo, statusAnggota } = require("../models");
 const { where } = require("sequelize");
+const filter = require("../../utils/filter");
+const statusanggota = require("../models/statusanggota");
 
 const getUser = async (req, res, next) => {
   try {
@@ -42,28 +44,126 @@ const getProfile = async (req, res) => {
   }
 };
 
-const changePassword = async (req, res, next) => {
+const getUserByRole = async (req, res) => {
   try {
-    const userId = res.locals.user.id;
-    const { oldPassword, newPassword } = req.body;
+    let { page, limit = 2, role } = req.query;
 
-    const user = await User.findByPk(userId);
+    console.log(role);
 
+    const roleInfo = await Role.findOne({
+      where: {
+        roleName: role,
+      },
+    });
 
+    if (!roleInfo)
+      return res.status(404).json(utils.apiError(`Role ${role} Tidak Ditemukan`));
+
+    const totalCount = await User.count({
+      where: {
+        roleId: roleInfo.id,
+      },
+    });
+
+    let pages = (page - 1) * limit;
+    const data = await User.findAll({
+      where: {
+        roleId: roleInfo.id,
+      },
+      include: [
+        {
+          model: statusAnggota,
+          attributes: ["statusName"],
+        },
+        {
+          model: Role,
+          attributes: ["roleName"],
+        },
+        {
+          model: Saldo,
+          attributes: ["saldoIuranWajib", "saldoIuranSukarela", "saldoPenjualan"],
+        },
+      ],
+      limit: limit,
+      offset: pages,
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return res
+      .status(200)
+      .json(utils.apiSuccess(`Data ${role} ditemukan`, { totalPages, data }));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOne({
+      where: {
+        id: id,
+      },
+    });
 
     if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
 
-    if (user.password) {
-      const verifyOldPassword = await utils.verifyHashData(oldPassword, user.password);
+    const role = await Role.findOne({
+      where: {
+        id: user.roleId,
+      },
+    });
 
-      if (!verifyOldPassword)
-        return res.status(409).json(utils.apiError("Password lama salah"));
-    }
+    await User.destroy({
+      where: {
+        id: id,
+      },
+    });
 
-    const hashPassword = await utils.createHashData(newPassword);
+    return res.status(201).json(utils.apiSuccess(`Berhasil Menghapus ${role.roleName}`));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+  }
+};
+
+const updateAktor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      roleId,
+      statusAnggotaId,
+      name,
+      noTelp,
+      saldoIuranWajib,
+      saldoIuran,
+      saldoPenjualan,
+    } = req.body;
+
+    const user = await User.findByPk(id);
+
+    if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
+
+    const saldo = await Saldo.findOne({
+      where: {
+        userId: user.id,
+      },
+    });
+    const role = await Role.findByPk(user.id);
+
+    if (!saldo) return res.status(404).json(utils.apiError("Saldo User tidak ditemukan"));
 
     await User.update(
-      { password: hashPassword },
+      {
+        roleId: roleId,
+        statusAnggotaId: statusAnggotaId,
+        name: name,
+        noTelp: noTelp,
+      },
       {
         where: {
           id: user.id,
@@ -71,7 +171,20 @@ const changePassword = async (req, res, next) => {
       }
     );
 
-    return res.status(200).json(utils.apiSuccess("profile berhasil diperbaharui"));
+    await Role.update(
+      {
+        saldoIuranWajib: saldoIuranWajib,
+        saldoIuran: saldoIuran,
+        saldoPenjualan: saldoPenjualan,
+      },
+      {
+        where: {
+          userId: saldo.userId,
+        },
+      }
+    );
+
+    return res.status(200).json(utils.apiSuccess(`${role.roleName} berhasil diupdate`));
   } catch (error) {
     console.log(error);
     return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
@@ -81,5 +194,7 @@ const changePassword = async (req, res, next) => {
 module.exports = {
   getUser,
   getProfile,
-  changePassword,
+  getUserByRole,
+  deleteUser,
+  updateAktor,
 };

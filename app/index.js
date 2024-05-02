@@ -4,7 +4,6 @@ const cors = require("cors");
 const utils = require("../utils/utils");
 const errorHandler = require("./controller/errorConttroller");
 const router = require("./routes");
-const userRoutes = require("./routes/User")
 const app = express();
 
 app.use(express.json());
