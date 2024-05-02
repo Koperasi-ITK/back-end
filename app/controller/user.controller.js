@@ -131,9 +131,70 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const updateAktor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      roleId,
+      statusAnggotaId,
+      name,
+      noTelp,
+      saldoIuranWajib,
+      saldoIuran,
+      saldoPenjualan,
+    } = req.body;
+
+    const user = await User.findByPk(id);
+
+    if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
+
+    const saldo = await Saldo.findOne({
+      where: {
+        userId: user.id,
+      },
+    });
+    const role = await Role.findByPk(user.id);
+
+    if (!saldo) return res.status(404).json(utils.apiError("Saldo User tidak ditemukan"));
+
+    await User.update(
+      {
+        roleId: roleId,
+        statusAnggotaId: statusAnggotaId,
+        name: name,
+        noTelp: noTelp,
+      },
+      {
+        where: {
+          id: user.id,
+        },
+      }
+    );
+
+    await Role.update(
+      {
+        saldoIuranWajib: saldoIuranWajib,
+        saldoIuran: saldoIuran,
+        saldoPenjualan: saldoPenjualan,
+      },
+      {
+        where: {
+          userId: saldo.userId,
+        },
+      }
+    );
+
+    return res.status(200).json(utils.apiSuccess(`${role.roleName} berhasil diupdate`));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+  }
+};
+
 module.exports = {
   getUser,
   getProfile,
   getUserByRole,
   deleteUser,
+  updateAktor,
 };

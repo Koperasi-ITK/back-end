@@ -25,7 +25,7 @@ module.exports = {
 
   createJwt: async (payload) => {
     try {
-      return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "2h" });
+      return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
     } catch (error) {
       console.log(error);
     }
