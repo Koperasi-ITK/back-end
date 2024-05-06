@@ -1,6 +1,6 @@
-const utils = require("../../utils/utils");
-const ImageKitFile = require("../../utils/ImageKit");
-const { Kategori } = require("../models");
+const utils = require("../../../utils/utils");
+const ImageKitFile = require("../../../utils/ImageKit");
+const { Kategori } = require("../../models");
 const { where } = require("sequelize");
 
 const createCategory = async (req, res) => {

@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const categoryController = require("../controller/category.controller");
+const categoryController = require("../controller/category/category.controller");
 const { verifyToken } = require("../middleware/authMiddleware");
 const verifyRole = require("../middleware/checkRole");
 const multer = require("multer")();

@@ -1,4 +1,3 @@
-const { compareSync } = require("bcrypt");
 const utils = require("../../utils/utils");
 const { User, Role, Saldo, statusAnggota } = require("../models");
 const { where } = require("sequelize");
@@ -140,7 +139,7 @@ const updateAktor = async (req, res) => {
       name,
       noTelp,
       saldoIuranWajib,
-      saldoIuran,
+      saldoIuranSukarela,
       saldoPenjualan,
     } = req.body;
 
@@ -153,7 +152,8 @@ const updateAktor = async (req, res) => {
         userId: user.id,
       },
     });
-    const role = await Role.findByPk(user.id);
+
+    const role = await Role.findByPk(user.roleId);
 
     if (!saldo) return res.status(404).json(utils.apiError("Saldo User tidak ditemukan"));
 
@@ -171,10 +171,10 @@ const updateAktor = async (req, res) => {
       }
     );
 
-    await Role.update(
+    await Saldo.update(
       {
         saldoIuranWajib: saldoIuranWajib,
-        saldoIuran: saldoIuran,
+        saldoIuranSukarela: saldoIuranSukarela,
         saldoPenjualan: saldoPenjualan,
       },
       {

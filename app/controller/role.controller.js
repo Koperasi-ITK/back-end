@@ -1,4 +1,3 @@
-const { url } = require("../../config/imgkit");
 const utils = require("../../utils/utils");
 const { Role } = require("../models");
 
