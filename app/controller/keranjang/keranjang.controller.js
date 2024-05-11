@@ -53,19 +53,89 @@ exports.getBarangDiKeranjang = async (req, res) => {
         if (!keranjang) {
             return res.status(404).json(utils.apiError("Keranjang tidak ditemukan"));
         }
+
         const items = await itemKeranjang.findAll({
             where: { keranjangId: keranjang.id },
-            include: [
-                {
-                    model: Barang,
-                    as: 'Barang',
-                }
-            ]
+            include: [{
+                model: Barang,
+                as: 'Barang',
+                attributes: ['nama', 'harga', 'urlGambar']
+            }]
         });
+
         if (items.length === 0) {
             return res.status(200).json(utils.apiSuccess("Keranjang kosong", []));
         }
-        return res.status(200).json(utils.apiSuccess("Item di keranjang", items));
+
+        const totalHarga = items.reduce((sum, item) => sum + (item.Barang.harga * item.jumlah), 0);
+
+        const simplifiedItems = items.map(item => ({
+            id: item.id,
+            namaBarang: item.Barang.nama,
+            harga: item.Barang.harga,
+            jumlah: item.jumlah,
+            subTotal: item.Barang.harga * item.jumlah,
+            urlGambar: item.Barang.urlGambar
+        }));
+
+        return res.status(200).json(utils.apiSuccess("Item di keranjang", {
+            items: simplifiedItems,
+            totalHarga
+        }));
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+    }
+};
+
+exports.hapusDariKeranjang = async (req, res) => {
+    const userId = res.locals.user.id;
+    const { itemKeranjangId } = req.params;
+
+    try {
+        const item = await itemKeranjang.findOne({
+            where: {
+                id: itemKeranjangId,
+                keranjangId: (await Keranjang.findOne({ where: { userId } })).id
+            }
+        });
+
+        if (!item) {
+            return res.status(404).json(utils.apiError("Item tidak ditemukan di keranjang"));
+        }
+
+        await item.destroy();
+        return res.status(200).json(utils.apiSuccess("Item telah dihapus dari keranjang"));
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+    }
+};
+
+exports.ubahJumlahDiKeranjang = async (req, res) => {
+    const userId = res.locals.user.id;
+    const { itemKeranjangId, jumlahBaru } = req.body;
+
+    try {
+        const item = await itemKeranjang.findOne({
+            where: {
+                id: itemKeranjangId,
+                keranjangId: (await Keranjang.findOne({ where: { userId } })).id
+            },
+            include: [Barang]
+        });
+
+        if (!item) {
+            return res.status(404).json(utils.apiError("Item tidak ditemukan di keranjang"));
+        }
+
+        if (jumlahBaru > item.Barang.stok) {
+            return res.status(400).json(utils.apiError("Jumlah yang diminta melebihi stok yang tersedia"));
+        }
+
+        item.jumlah = jumlahBaru;
+        await item.save();
+        return res.status(200).json(utils.apiSuccess("Jumlah item di keranjang berhasil diperbarui", item));
     } catch (error) {
         console.log(error);
         return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));

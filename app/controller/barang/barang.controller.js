@@ -1,6 +1,7 @@
 const utils = require("../../../utils/utils");
 const ImageKitFile = require("../../../utils/ImageKit");
 const { Barang, Kategori, statusStok, User } = require("../../models");
+const { Op } = require('sequelize');
 
 exports.tambahBarang = async (req, res) => {
     try {
@@ -45,14 +46,17 @@ exports.hapusBarang = async (req, res) => {
     try {
         const barangId = req.params.id;
         const userId = res.locals.user.id;
+        const userRole = res.locals.user.roleId;
         const barang = await Barang.findByPk(barangId);
 
         if (!barang) {
             return res.status(404).json(utils.apiError("Barang tidak ditemukan"));
         }
-        if (barang.userId !== userId) {
-            return res.status(403).json(utils.apiError("Hanya pemilik barang yang dapat menghapus barang ini"));
+
+        if (barang.userId !== userId && userRole !== 4) {
+            return res.status(403).json(utils.apiError("Anda tidak memiliki izin untuk menghapus barang ini"));
         }
+
         const urlGambar = barang.urlGambar;
         const namaFile = urlGambar.substring(urlGambar.lastIndexOf('/') + 1);
         const imageDeleteSuccess = await ImageKitFile.delete(namaFile);
@@ -60,36 +64,73 @@ exports.hapusBarang = async (req, res) => {
             return res.status(500).json(utils.apiError("Gagal menghapus gambar"));
         }
         await Barang.destroy({
-            where: {
-                id: barangId
-            }
+            where: { id: barangId }
         });
 
         res.status(200).json(utils.apiSuccess("Barang dan gambar berhasil dihapus"));
     } catch (error) {
-        console.log(error);
+        console.error(error);
         res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
     }
 };
 
 exports.getSemuaBarang = async (req, res) => {
     try {
+        const { id, nama, kategori } = req.query;
+        const whereClause = {};
+        const includeClause = [];
+
+        if (id) {
+            whereClause.id = id;
+        }
+
+        if (nama) {
+            whereClause.nama = {
+                [Op.like]: `%${nama.toLowerCase()}%`
+            };
+        }
+
+        if (kategori) {
+            includeClause.push({
+                model: Kategori,
+                attributes: ['namaKategori'],
+                where: {
+                    namaKategori: {
+                        [Op.like]: `%${kategori.toLowerCase()}%`
+                    }
+                }
+            });
+        } else {
+            includeClause.push({
+                model: Kategori,
+                attributes: ['namaKategori']
+            });
+        }
+
+        includeClause.push(
+            {
+                model: statusStok,
+                attributes: ['statusStok']
+            },
+            {
+                model: User,
+                attributes: ['name']
+            }
+        );
+
         const semuaBarang = await Barang.findAll({
-            include: [
-                {
-                    model: Kategori
-                },
-                {
-                    model: statusStok
-                },
-                // {
-                //     model: User
-                // }
-            ]
+            where: whereClause,
+            attributes: ['id', 'nama', 'harga', 'urlGambar', 'stok'],
+            include: includeClause
         });
+
+        if (semuaBarang.length === 0) {
+            return res.status(404).json(utils.apiError("Barang tidak ditemukan atau kosong"));
+        }
+
         res.status(200).json(utils.apiSuccess("Semua barang berhasil diambil", semuaBarang));
     } catch (error) {
-        console.log(error);
+        console.error(error);
         res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
     }
 };
@@ -110,6 +151,9 @@ exports.getBarangPenjual = async (req, res) => {
                 }
             ]
         });
+        if (barangPenjual.length === 0) {
+            return res.status(404).json(utils.apiError("Tidak ada barang yang di jual"));
+        }
         res.status(200).json(utils.apiSuccess(`Barang dijual oleh penjual dengan ID: ${userId} berhasil diambil`, barangPenjual));
     } catch (error) {
         console.log(error);
