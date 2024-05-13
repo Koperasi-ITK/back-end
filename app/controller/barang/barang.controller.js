@@ -76,7 +76,7 @@ exports.hapusBarang = async (req, res) => {
 
 exports.getSemuaBarang = async (req, res) => {
     try {
-        const { id, nama, kategori } = req.query;
+        const { id, nama, kategori, page = 1, limit = 10 } = req.query;
         const whereClause = {};
         const includeClause = [];
 
@@ -118,17 +118,25 @@ exports.getSemuaBarang = async (req, res) => {
             }
         );
 
-        const semuaBarang = await Barang.findAll({
+        const offset = (page - 1) * limit;
+        const semuaBarang = await Barang.findAndCountAll({
             where: whereClause,
             attributes: ['id', 'nama', 'harga', 'urlGambar', 'stok'],
-            include: includeClause
+            include: includeClause,
+            offset: offset,
+            limit: parseInt(limit)
         });
 
-        if (semuaBarang.length === 0) {
+        if (semuaBarang.rows.length === 0) {
             return res.status(404).json(utils.apiError("Barang tidak ditemukan atau kosong"));
         }
 
-        res.status(200).json(utils.apiSuccess("Semua barang berhasil diambil", semuaBarang));
+        res.status(200).json(utils.apiSuccess("Semua barang berhasil diambil", {
+            totalItems: semuaBarang.count,
+            totalPages: Math.ceil(semuaBarang.count / limit),
+            currentPage: page,
+            items: semuaBarang.rows
+        }));
     } catch (error) {
         console.error(error);
         res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
@@ -138,7 +146,10 @@ exports.getSemuaBarang = async (req, res) => {
 exports.getBarangPenjual = async (req, res) => {
     try {
         const userId = res.locals.user.id;
-        const barangPenjual = await Barang.findAll({
+        const { page = 1, limit = 10 } = req.query;
+
+        const offset = (page - 1) * limit;
+        const barangPenjual = await Barang.findAndCountAll({
             where: {
                 userId: userId
             },
@@ -149,42 +160,26 @@ exports.getBarangPenjual = async (req, res) => {
                 {
                     model: statusStok
                 }
-            ]
+            ],
+            offset: offset,
+            limit: parseInt(limit)
         });
-        if (barangPenjual.length === 0) {
+
+        if (barangPenjual.rows.length === 0) {
             return res.status(404).json(utils.apiError("Tidak ada barang yang di jual"));
         }
-        res.status(200).json(utils.apiSuccess(`Barang dijual oleh penjual dengan ID: ${userId} berhasil diambil`, barangPenjual));
+
+        res.status(200).json(utils.apiSuccess(`Barang dijual oleh penjual dengan ID: ${userId} berhasil diambil`, {
+            totalItems: barangPenjual.count,
+            totalPages: Math.ceil(barangPenjual.count / limit),
+            currentPage: page,
+            items: barangPenjual.rows
+        }));
     } catch (error) {
         console.log(error);
         res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
     }
 };
-
-// exports.editJumlahBarang = async (req, res) => {
-//     try {
-//         const barangId = req.params.id;
-//         const { stok } = req.body;
-//         const userId = res.locals.user.id;
-//         const barang = await Barang.findOne({
-//             where: {
-//                 id: barangId,
-//                 userId: userId
-//             }
-//         });
-
-//         if (!barang) {
-//             return res.status(404).json(utils.apiError("Barang tidak ditemukan atau Anda tidak memiliki hak untuk mengedit barang ini."));
-//         }
-//         barang.stok = stok;
-//         await barang.save();
-
-//         res.status(200).json(utils.apiSuccess("Jumlah stok barang berhasil diperbarui", barang));
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
-//     }
-// };
 
 exports.editBarang = async (req, res) => {
     try {
