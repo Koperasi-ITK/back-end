@@ -46,8 +46,25 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
+    await queryInterface.sequelize.query(`
+      CREATE TRIGGER before_update_statusStokId
+      BEFORE UPDATE ON barangs
+      FOR EACH ROW
+      BEGIN
+          IF NEW.stok = 0 THEN
+              SET NEW.statusStokId = 2;
+          ELSEIF NEW.stok > 0 THEN
+              SET NEW.statusStokId = 1;
+          END IF;
+      END
+    `);
   },
+
   async down(queryInterface, Sequelize) {
+    await queryInterface.sequelize.query(`
+      DROP TRIGGER IF EXISTS before_update_statusStokId;
+    `);
+
     await queryInterface.dropTable("Barangs");
-  },
+  }
 };
