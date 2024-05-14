@@ -14,8 +14,8 @@ module.exports = (sequelize, DataTypes) => {
   }
   itemKeranjang.init(
     {
-      keranjang_id: { type: DataTypes.INTEGER, primaryKey: true, allowNull: false },
-      barang_id: { type: DataTypes.INTEGER, primaryKey: true, allowNull: false },
+      keranjangId: { type: DataTypes.INTEGER, primaryKey: true, allowNull: false },
+      barangId: { type: DataTypes.INTEGER, primaryKey: true, allowNull: false },
       jumlah: DataTypes.INTEGER,
     },
     {

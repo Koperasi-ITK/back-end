@@ -191,10 +191,39 @@ const updateAktor = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const userId = res.locals.user.id;
+    const { noTelp } = req.body;
+
+
+    const user = await User.findByPk(userId);
+
+    if (!user) return res.status(404).json(utils.apiError("User Tidak Ditemukan"));
+
+    const data = await User.update(
+      {
+        noTelp: noTelp,
+      },
+      {
+        where: {
+          id: user.id,
+        },
+      }
+    );
+
+    return res.status(200).json(utils.apiSuccess("Berhasil update Nomor Telpon"));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+  }
+};
+
 module.exports = {
   getUser,
   getProfile,
   getUserByRole,
   deleteUser,
   updateAktor,
+  updateProfile,
 };

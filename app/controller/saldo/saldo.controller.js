@@ -1,11 +1,11 @@
+const { where } = require("sequelize");
 const utils = require("../../../utils/utils"),
-  { Saldo, User } = require("../../models");
-const { apiError, apiSuccess } = require("../../../utils/utils");
+  { Saldo, User, RiwayatTopup } = require("../../models");
 
 const addSaldo = async (req, res) => {
   try {
     const { email } = req.params;
-    const { saldoIuranWajib, saldoIuranSukarela, saldoPenjualan } = req.body;
+    const { saldoIuranWajib, saldoIuranSukarela } = req.body;
 
     const user = await User.findOne({
       where: {
@@ -13,7 +13,7 @@ const addSaldo = async (req, res) => {
       },
     });
 
-    if (!user) return res.status(404).json(apiError("User tidak ditemukan"));
+    if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
 
     const saldo = await Saldo.findOne({
       where: {
@@ -25,7 +25,6 @@ const addSaldo = async (req, res) => {
       {
         saldoIuranWajib: (saldo.saldoIuranWajib += saldoIuranWajib),
         saldoIuranSukarela: (saldo.saldoIuranSukarela += saldoIuranSukarela),
-        saldoPenjualan: (saldo.saldoPenjualan += saldoPenjualan),
       },
       {
         where: {
@@ -34,10 +33,16 @@ const addSaldo = async (req, res) => {
       }
     );
 
-    const data = {
+    await RiwayatTopup.create({
+      userId: user.id,
       saldoIuranWajib: saldoIuranWajib,
       saldoIuranSukarela: saldoIuranSukarela,
-      saldoPenjualan: saldoPenjualan,
+    });
+
+    const data = {
+      email: user.email,
+      saldoIuranWajib: saldoIuranWajib,
+      saldoIuranSukarela: saldoIuranSukarela,
     };
 
     return res
@@ -49,6 +54,60 @@ const addSaldo = async (req, res) => {
   }
 };
 
+const RiwayatTopUp = async (req, res) => {
+  try {
+    const RiwayatSaldo = await RiwayatTopup.findAll({
+      include: [
+        {
+          model: User,
+          attributes: ["name", "email"],
+        },
+      ],
+    });
+
+    const result = RiwayatSaldo.map((item) => {
+      return {
+        id: item.id,
+        userId: item.userId,
+        name: item.User.name,
+        email: item.User.email,
+        saldoIuranWajib: item.saldoIuranWajib,
+        saldoIuranSukarela: item.saldoIuranSukarela,
+        createdAt: item.createdAt,
+      };
+    });
+
+    return res
+      .status(200)
+      .json(utils.apiSuccess("Berhasil mengambil riwayat topup", result));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+  }
+};
+
+const saldoUser = async (req, res) => {
+  try {
+    const userId = res.locals.user.id;
+
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json(utils.apiError("User Tidak Ditemukan"));
+
+    const data = await Saldo.findOne({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    return res.status(200).json(utils.apiSuccess("Berhasil mengambil saldo", data));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+  }
+};
+
 module.exports = {
   addSaldo,
+  RiwayatTopUp,
+  saldoUser,
 };

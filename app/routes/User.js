@@ -8,6 +8,7 @@ router.get("/aktor", verifyToken, userController.getUserByRole);
 router.get("/profile", verifyToken, userController.getProfile);
 router.delete("/:id", verifyToken, userController.deleteUser);
 router.put("/aktor/:id", verifyToken, verifyRole(4), userController.updateAktor);
+router.patch("/profile", verifyToken, userController.updateProfile);
 
 // router.get("/profile", verifyToken, userController.getUserProfile);
 // router.put("/changepassword", verifyToken, userController.changePassword);

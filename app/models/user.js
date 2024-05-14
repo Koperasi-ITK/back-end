@@ -20,6 +20,7 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.Transaksi, {
         foreignKey: "userId",
       });
+      User.hasMany(models.RiwayatTopup, { foreignKey: "userId" });
     }
   }
   User.init(

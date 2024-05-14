@@ -4,5 +4,7 @@ const router = require("express").Router(),
   verifyRole = require("../middleware/checkRole");
 
 router.put("/:email", verifyToken, verifyRole(4), saldo.addSaldo);
+router.get("/", verifyToken, verifyRole(4), saldo.RiwayatTopUp);
+router.get("/user", verifyToken, saldo.saldoUser);
 
 module.exports = router;
