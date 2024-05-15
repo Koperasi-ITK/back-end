@@ -132,7 +132,7 @@ exports.cancelCheckout = async (req, res) => {
 
 exports.getTransaksi = async (req, res) => {
   const userId = res.locals.user.id;
-  const { statusPengiriman: statusPengirimanId, transaksiId } = req.params;
+  const { statusPengirimanId, transaksiId } = req.params;
   let statusCondition;
   if (statusPengirimanId) {
     statusCondition = { id: statusPengirimanId };
@@ -145,13 +145,13 @@ exports.getTransaksi = async (req, res) => {
   try {
     const transactions = await Transaksi.findAll({
       where: { userId, ...(transaksiId && { id: transaksiId }) },
-      attributes: ['id','totalHarga', 'alamatPengiriman', 'waktuPengambilan'],
+      attributes: ['id', 'totalHarga', 'alamatPengiriman', 'waktuPengambilan'],
       include: [
         {
           model: detailTransaksi,
           include: [{
             model: Barang,
-            attributes: ['nama', 'harga']
+            attributes: ['nama', 'harga', 'urlGambar']
           }],
           attributes: ['jumlah', 'hargaItem', 'totalHarga']
         },
@@ -170,7 +170,25 @@ exports.getTransaksi = async (req, res) => {
     if (!transactions.length) {
       return res.status(404).json({ message: "Tidak ada Transaksi" });
     }
-    return res.status(200).json({ status: 'success', message: "Transaksi Ditemukan.", data: transactions });
+
+    const mappedTransactions = transactions.map(transaction => ({
+      transactionId: transaction.id,
+      totalHarga: transaction.totalHarga,
+      alamatPengiriman: transaction.alamatPengiriman,
+      waktuPengambilan: transaction.waktuPengambilan,
+      items: transaction.detailTransaksis.map(item => ({
+        name: item.Barang.nama,
+        price: item.Barang.harga,
+        ImageUrl: item.Barang.urlGambar,
+        jumlah: item.jumlah,
+        HargaItem: item.hargaItem,
+        totalHargaItem: item.totalHarga
+      })),
+      StatusPengiriman: transaction.statusPengiriman.statusPengirimanName,
+      MetodePengiriman: transaction.metodePengiriman.metodePengirimanName
+    }));
+
+    return res.status(200).json({ status: 'success', message: "Transaksi Ditemukan.", data: mappedTransactions });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ status: 'error', message: "An error occurred while retrieving transactions.", errors: { error: error.message } });

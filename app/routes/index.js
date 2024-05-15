@@ -6,6 +6,7 @@ const barang = require("./barang");
 const keranjang = require("./keranjang");
 const pegawai = require("./pegawai");
 const transaksi = require("./transaksi");
+const saldo = require("./saldo");
 const router = express.Router();
 
 router.use("/auth", Auth);
@@ -15,6 +16,7 @@ router.use("/barang",barang);
 router.use("/keranjang",keranjang);
 router.use("/pegawai",pegawai);
 router.use("/transaksi",transaksi);
+router.use("/saldo",saldo);
 
 
 module.exports = router;
