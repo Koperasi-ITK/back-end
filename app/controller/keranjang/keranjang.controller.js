@@ -127,29 +127,34 @@ exports.hapusDariKeranjang = async (req, res) => {
 exports.ubahJumlahDiKeranjang = async (req, res) => {
     const userId = res.locals.user.id;
     const { itemKeranjangId, jumlahBaru } = req.body;
-
+  
     try {
-        const item = await itemKeranjang.findOne({
-            where: {
-                id: itemKeranjangId,
-                keranjangId: (await Keranjang.findOne({ where: { userId } })).id
-            },
-            include: [Barang]
-        });
-
-        if (!item) {
-            return res.status(404).json(utils.apiError("Item tidak ditemukan di keranjang"));
-        }
-
-        if (jumlahBaru > item.Barang.stok) {
-            return res.status(400).json(utils.apiError("Jumlah yang diminta melebihi stok yang tersedia"));
-        }
-
+      const item = await itemKeranjang.findOne({
+        where: {
+          id: itemKeranjangId,
+          keranjangId: (await Keranjang.findOne({ where: { userId } })).id
+        },
+        include: [Barang]
+      });
+  
+      if (!item) {
+        return res.status(404).json(utils.apiError("Item tidak ditemukan di keranjang"));
+      }
+  
+      if (jumlahBaru > item.Barang.stok) {
+        return res.status(400).json(utils.apiError("Jumlah yang diminta melebihi stok yang tersedia"));
+      }
+  
+      if (jumlahBaru === 0) {
+        await item.destroy();
+        return res.status(200).json(utils.apiSuccess("Item telah dihapus dari keranjang"));
+      } else {
         item.jumlah = jumlahBaru;
         await item.save();
         return res.status(200).json(utils.apiSuccess("Jumlah item di keranjang berhasil diperbarui", item));
+      }
     } catch (error) {
-        console.log(error);
-        return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+      console.log(error);
+      return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
     }
-};
+  };

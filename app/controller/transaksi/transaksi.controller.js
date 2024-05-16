@@ -145,7 +145,7 @@ exports.getTransaksi = async (req, res) => {
   try {
     const transactions = await Transaksi.findAll({
       where: { userId, ...(transaksiId && { id: transaksiId }) },
-      attributes: ['id', 'totalHarga', 'alamatPengiriman', 'waktuPengambilan'],
+      attributes: ['id', 'totalHarga', 'alamatPengiriman', 'waktuPengambilan','createdAt'],
       include: [
         {
           model: detailTransaksi,
@@ -176,6 +176,7 @@ exports.getTransaksi = async (req, res) => {
       totalHarga: transaction.totalHarga,
       alamatPengiriman: transaction.alamatPengiriman,
       waktuPengambilan: transaction.waktuPengambilan,
+      createdAt: transaction.createdAt,
       items: transaction.detailTransaksis.map(item => ({
         name: item.Barang.nama,
         price: item.Barang.harga,
