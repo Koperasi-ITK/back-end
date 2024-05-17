@@ -196,6 +196,55 @@ exports.getTransaksi = async (req, res) => {
   }
 };
 
+exports.getSalesHistory = async (req, res) => {
+  const sellerId = res.locals.user.id;
+
+  try {
+    const sales = await detailTransaksi.findAll({
+      include: [
+        {
+          model: Transaksi,
+          attributes: ['id', 'totalHarga', 'statusPengirimanId', 'createdAt', 'updatedAt'],
+          include: [{
+            model: statusPengiriman,
+            attributes: ['statusPengirimanName']
+          }]
+        },
+        {
+          model: Barang,
+          where: { userId: sellerId },
+          attributes: ['nama', 'harga', 'urlGambar']
+        }
+      ]
+    });
+
+    if (!sales.length) {
+      return res.status(404).json({ message: "Tidak ada riwayat penjualan." });
+    }
+
+    const salesHistory = sales.map(sale => ({
+      transactionId: sale.Transaksi.id,
+      totalHarga: sale.Transaksi.totalHarga,
+      statusPengiriman: sale.Transaksi.statusPengiriman.statusPengirimanName,
+      createdAt: sale.Transaksi.createdAt,
+      updatedAt: sale.Transaksi.updatedAt,
+      item: {
+        name: sale.Barang.nama,
+        price: sale.Barang.harga,
+        ImageUrl: sale.Barang.urlGambar,
+        jumlah: sale.jumlah,
+        hargaItem: sale.hargaItem,
+        totalHargaItem: sale.totalHarga
+      }
+    }));
+
+    return res.status(200).json({ status: 'success', message: "Riwayat Penjualan ditemukan.", data: salesHistory });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ status: 'error', message: "Kesalahan server saat mengambil riwayat penjualan.", error: error.message });
+  }
+};
+
 async function distributeFunds(transaksiId) {
   const detailTransaksis = await detailTransaksi.findAll({
       where: { transaksiId },
@@ -234,7 +283,7 @@ exports.BarangDiterima = async (req, res) => {
 
       await distributeFunds(transaksiId);
 
-      return res.status(200).json({ message: "Konfirmasi penerimaan berhasil, saldo penjual diperbarui." });
+      return res.status(200).json({ message: "Konfirmasi penerimaan berhasil." });
   } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Kesalahan server saat mengkonfirmasi penerimaan.", error: error.message });

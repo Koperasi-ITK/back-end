@@ -11,6 +11,9 @@ router.get(
   verifyRole(1),
   transaksicontroller.getTransaksi
 );
+
+router.get("/getSalesHistory", verifyToken, verifyRole(1), transaksicontroller.getSalesHistory);
+
 router.post(
   "/Konfirmasi/:transaksiId",
   verifyToken,
