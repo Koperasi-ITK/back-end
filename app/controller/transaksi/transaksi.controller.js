@@ -198,9 +198,15 @@ exports.getTransaksi = async (req, res) => {
 
 exports.getSalesHistory = async (req, res) => {
   const sellerId = res.locals.user.id;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
 
   try {
-    const sales = await detailTransaksi.findAll({
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await detailTransaksi.findAndCountAll({
+      offset,
+      limit,
       include: [
         {
           model: Transaksi,
@@ -218,11 +224,11 @@ exports.getSalesHistory = async (req, res) => {
       ]
     });
 
-    if (!sales.length) {
+    if (!rows.length) {
       return res.status(404).json({ message: "Tidak ada riwayat penjualan." });
     }
 
-    const salesHistory = sales.map(sale => ({
+    const salesHistory = rows.map(sale => ({
       transactionId: sale.Transaksi.id,
       totalHarga: sale.Transaksi.totalHarga,
       statusPengiriman: sale.Transaksi.statusPengiriman.statusPengirimanName,
@@ -238,7 +244,18 @@ exports.getSalesHistory = async (req, res) => {
       }
     }));
 
-    return res.status(200).json({ status: 'success', message: "Riwayat Penjualan ditemukan.", data: salesHistory });
+    const totalPages = Math.ceil(count / limit);
+
+    return res.status(200).json({
+      status: 'success',
+      message: "Riwayat Penjualan ditemukan.",
+      data: salesHistory,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalRecords: count
+      }
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ status: 'error', message: "Kesalahan server saat mengambil riwayat penjualan.", error: error.message });

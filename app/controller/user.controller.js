@@ -23,17 +23,26 @@ const getProfile = async (req, res) => {
   try {
     const userId = res.locals.user;
 
-    const user = await User.findByPk(userId.id);
+    const user = await User.findByPk(userId.id, {
+      include: [
+        {
+          model: statusAnggota,
+          attributes: ["statusName"]
+        }
+      ]
+    });
 
     if (!user) return res.status(400).json(utils.apiError("User tidak ditemukan"));
 
+    const statusAnggotaName = user.statusAnggotum ? user.statusAnggotum.statusName : "Status tidak ditemukan";
+
     const data = {
-      // id: User.id,
       name: user.name,
       email: user.email,
       user_status: user.user_status,
       noTelp: user.noTelp,
       urlProfile: user.urlProfile,
+      statusAnggota: statusAnggotaName
     };
 
     return res.status(200).json(utils.apiSuccess("Data user berhasil diambil", data));
