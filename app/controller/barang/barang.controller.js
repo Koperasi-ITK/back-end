@@ -149,41 +149,83 @@ exports.getSemuaBarang = async (req, res) => {
 
 exports.getBarangPenjual = async (req, res) => {
     try {
-        const userId = res.locals.user.id;
-        const { page = 1, limit = 10 } = req.query;
-
-        const offset = (page - 1) * limit;
-        const barangPenjual = await Barang.findAndCountAll({
-            where: {
-                userId: userId
-            },
-            include: [
-                {
-                    model: Kategori
-                },
-                {
-                    model: statusStok
-                }
-            ],
-            offset: offset,
-            limit: parseInt(limit)
+      const userId = res.locals.user.id;
+      const { page = 1, limit = 10, nama, kategori, sortBy, sortOrder = 'ASC' } = req.query;
+  
+      const offset = (page - 1) * limit;
+      const whereClause = { userId: userId };
+      const includeClause = [
+        { model: Kategori },
+        { model: statusStok }
+      ];
+      const orderClause = [];
+  
+      if (nama) {
+        whereClause.nama = {
+          [Op.like]: `%${nama.toLowerCase()}%`
+        };
+      }
+  
+      if (kategori) {
+        includeClause.push({
+          model: Kategori,
+          where: {
+            namaKategori: {
+              [Op.like]: `%${kategori.toLowerCase()}%`
+            }
+          }
         });
-
-        if (barangPenjual.rows.length === 0) {
-            return res.status(404).json(utils.apiError("Tidak ada barang yang di jual"));
-        }
-
-        res.status(200).json(utils.apiSuccess(`Barang dijual oleh penjual dengan ID: ${userId} berhasil diambil`, {
-            totalItems: barangPenjual.count,
-            totalPages: Math.ceil(barangPenjual.count / limit),
-            currentPage: page,
-            items: barangPenjual.rows
-        }));
+      }
+  
+      switch (sortBy) {
+        case 'date':
+          orderClause.push(['createdAt', sortOrder]);
+          break;
+        case 'price':
+          orderClause.push(['harga', sortOrder]);
+          break;
+        case 'stock':
+          orderClause.push(['stok', sortOrder]);
+          break;
+        case 'status':
+          includeClause.push({
+            model: statusStok,
+            attributes: [],
+            where: {
+              statusStok: {
+                [Op.like]: `%${sortOrder.toLowerCase()}%`
+              }
+            }
+          });
+          break;
+        default:
+          orderClause.push(['createdAt', 'DESC']);
+          break;
+      }
+  
+      const barangPenjual = await Barang.findAndCountAll({
+        where: whereClause,
+        include: includeClause,
+        offset: offset,
+        limit: parseInt(limit),
+        order: orderClause
+      });
+  
+      if (barangPenjual.rows.length === 0) {
+        return res.status(404).json(utils.apiError("Tidak ada barang yang di jual"));
+      }
+  
+      res.status(200).json(utils.apiSuccess(`Barang dijual oleh penjual dengan ID: ${userId} berhasil diambil`, {
+        totalItems: barangPenjual.count,
+        totalPages: Math.ceil(barangPenjual.count / limit),
+        currentPage: page,
+        items: barangPenjual.rows
+      }));
     } catch (error) {
-        console.log(error);
-        res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+      console.log(error);
+      res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
     }
-};
+  };
 
 exports.editBarang = async (req, res) => {
     try {
