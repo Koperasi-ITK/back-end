@@ -234,6 +234,7 @@ exports.editBarang = async (req, res) => {
         const { nama, harga, stok, kategoriId, statusStokId } = req.body;
         const userId = res.locals.user.id;
         const image = req.file;
+        console.log('Received data:', { barangId, nama, harga, stok, kategoriId, image });
         const barang = await Barang.findOne({
             where: {
                 id: barangId,
