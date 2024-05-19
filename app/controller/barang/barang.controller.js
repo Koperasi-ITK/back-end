@@ -150,7 +150,7 @@ exports.getSemuaBarang = async (req, res) => {
 exports.getBarangPenjual = async (req, res) => {
     try {
       const userId = res.locals.user.id;
-      const { page = 1, limit = 10, nama, kategori, sortBy, sortOrder = 'ASC' } = req.query;
+      const { page = 1, limit = 10, nama, kategori, sortBy, sortOrder = 'ASC', statusStok: statusStokFilter } = req.query;
   
       const offset = (page - 1) * limit;
       const whereClause = { userId: userId };
@@ -177,6 +177,15 @@ exports.getBarangPenjual = async (req, res) => {
         });
       }
   
+      if (statusStokFilter) {
+        includeClause.push({
+          model: statusStok,
+          where: {
+            statusStok: statusStokFilter.toLowerCase()
+          }
+        });
+      }
+  
       switch (sortBy) {
         case 'date':
           orderClause.push(['createdAt', sortOrder]);
@@ -188,15 +197,7 @@ exports.getBarangPenjual = async (req, res) => {
           orderClause.push(['stok', sortOrder]);
           break;
         case 'status':
-          includeClause.push({
-            model: statusStok,
-            attributes: [],
-            where: {
-              statusStok: {
-                [Op.like]: `%${sortOrder.toLowerCase()}%`
-              }
-            }
-          });
+          orderClause.push([statusStok, 'statusStok', sortOrder]);
           break;
         default:
           orderClause.push(['createdAt', 'DESC']);
