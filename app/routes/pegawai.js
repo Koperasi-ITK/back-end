@@ -41,5 +41,11 @@ router.put(
   verifyRole(3),
   pegawaiController.updateStock
 );
+router.post(
+  "/saldo/:userId/tarik-saldo",
+  verifyToken,
+  verifyRole(3),
+  pegawaiController.tarikSaldo
+);
 
 module.exports = router;

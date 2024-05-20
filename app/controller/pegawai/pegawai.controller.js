@@ -4,6 +4,7 @@ const {
   detailTransaksi,
   Transaksi,
   statusPengiriman,
+  Saldo,
   User
 } = require("../../models");
 
@@ -167,6 +168,32 @@ const pegawai = {
     res.status(500).json({ message: 'Internal server error' });
   }
 },
+
+async tarikSaldo(req,res) {
+  const { userId } = req.params;
+  const { jumlahPenarikan } = req.body;
+
+    try {
+      const saldo = await Saldo.findOne({ where: { userId } });
+
+      if (!saldo) {
+        return res.status(404).json({ message: 'Saldo tidak ditemukan' });
+      }
+
+      if (saldo.saldoPenjualan < jumlahPenarikan) {
+        return res.status(400).json({ message: 'Saldo iuran sukarela tidak mencukupi' });
+      }
+
+      saldo.saldoPenjualan -= jumlahPenarikan;
+
+      await saldo.save();
+      return res.status(200).json({ message: 'Penarikan berhasil', saldo });
+    } catch (error) {
+      console.error('Error during withdrawal:', error);
+      return res.status(500).json({ message: 'Terjadi kesalahan pada server' });
+    }
+
+}
 };
 
 module.exports = pegawai;
