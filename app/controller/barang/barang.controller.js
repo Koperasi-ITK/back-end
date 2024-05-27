@@ -49,13 +49,13 @@ exports.hapusBarang = async (req, res) => {
     try {
         const barangId = req.params.id;
         const userId = res.locals.user.id;
-        const userRole = res.locals.user.roleId;
+        const userRole = res.locals.user.role;
         const barang = await Barang.findByPk(barangId);
 
         if (!barang) {
             return res.status(404).json(utils.apiError("Barang tidak ditemukan"));
         }
-
+        console.log(`User ID: ${userId}, User Role: ${userRole}, Barang User ID: ${barang.userId}`);
         if (barang.userId !== userId && userRole !== 4) {
             return res.status(403).json(utils.apiError("Anda tidak memiliki izin untuk menghapus barang ini"));
         }
