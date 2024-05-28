@@ -8,6 +8,6 @@ router.post("/tambah", multer.single("image"), verifyToken,verifyRole(1),barangc
 router.delete("/hapus/:id",verifyToken,verifyRole(1,4),barangcontroller.hapusBarang);
 router.get("/",barangcontroller.getSemuaBarang);
 router.get("/barangjualan",verifyToken,verifyRole(1),barangcontroller.getBarangPenjual);
-router.put("/edit-barang/:id", verifyToken, verifyRole(1),multer.single("image"), barangcontroller.editBarang);
+router.put("/edit-barang/:id", verifyToken, verifyRole(1,4),multer.single("image"), barangcontroller.editBarang);
 
 module.exports = router;

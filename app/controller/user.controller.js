@@ -3,10 +3,24 @@ const { User, Role, Saldo, statusAnggota } = require("../models");
 const { where } = require("sequelize");
 const filter = require("../../utils/filter");
 const statusanggota = require("../models/statusanggota");
+const { Op } = require("sequelize");
 
 const getUser = async (req, res, next) => {
   try {
-    const datas = await User.findAll();
+    const { search } = req.query;
+    let whereClause = {};
+
+    if (search) {
+      whereClause = {
+        name: {
+          [Op.like]: `%${search}%`,
+        },
+      };
+    }
+
+    const datas = await User.findAll({
+      where: whereClause,
+    });
 
     const data = {
       datas,
@@ -14,7 +28,7 @@ const getUser = async (req, res, next) => {
 
     return res.status(200).json(utils.apiSuccess("Berhasil mengambil data user", data));
   } catch (error) {
-    console.log(error);
+    console.error("Error in getUser:", error);
     return res.status(500).json(utils.apiError("Kesalahan pada internal server"));
   }
 };

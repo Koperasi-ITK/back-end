@@ -228,20 +228,28 @@ exports.getBarangPenjual = async (req, res) => {
     }
   };
 
-exports.editBarang = async (req, res) => {
+  exports.editBarang = async (req, res) => {
     try {
         const barangId = req.params.id;
         const { nama, harga, stok, kategoriId, statusStokId } = req.body;
         const userId = res.locals.user.id;
+        const userRole = res.locals.user.role;
         const image = req.file;
-        console.log('Received data:', { barangId, nama, harga, stok, kategoriId, image });
-        const barang = await Barang.findOne({
-            where: {
-                id: barangId,
-                userId: userId
-            }
-            
-        });
+
+        let barang;
+        if (userRole === 4) {
+            barang = await Barang.findOne({
+                where: { id: barangId }
+            });
+        } else {
+            barang = await Barang.findOne({
+                where: {
+                    id: barangId,
+                    userId: userId
+                }
+            });
+        }
+
         if (!barang) {
             return res.status(404).json(utils.apiError("Barang tidak ditemukan atau Anda tidak memiliki hak untuk mengedit barang ini."));
         }
@@ -256,26 +264,28 @@ exports.editBarang = async (req, res) => {
 
             const allowedMimes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
             const allowedSizeMb = 2;
-    
+
             if (!allowedMimes.includes(image.mimetype))
                 return res.status(409).json(utils.apiError("Format gambar tidak diperbolehkan"));
-    
+
             if (image.size / (1024 * 1024) > allowedSizeMb)
                 return res.status(409).json(utils.apiError("Gambar tidak boleh lebih dari 2mb"));
 
             const uploadFile = await ImageKitFile.upload(image);
-            
+
             if (!uploadFile) {
                 return res.status(409).json(utils.apiError("Gagal mengupload gambar"));
             }
 
             barang.urlGambar = uploadFile.url;
         }
+
         if (nama !== undefined) barang.nama = nama;
         if (harga !== undefined) barang.harga = harga;
         if (stok !== undefined) barang.stok = stok;
         if (kategoriId !== undefined) barang.kategoriId = kategoriId;
         if (statusStokId !== undefined) barang.statusStokId = statusStokId;
+
         await barang.save();
         res.status(200).json(utils.apiSuccess("Barang berhasil diperbarui", barang));
     } catch (error) {
