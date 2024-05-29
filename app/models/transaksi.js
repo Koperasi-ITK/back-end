@@ -23,6 +23,10 @@ module.exports = (sequelize, DataTypes) => {
       Transaksi.hasMany(models.detailTransaksi, 
         { foreignKey: 'transaksiId' 
       });
+      Transaksi.hasMany(models.Pendapatan, {
+        foreignKey: 'transaksiId',
+        as: 'pendapatans',
+      });
     }
   }
   Transaksi.init(
