@@ -5,7 +5,7 @@ const verifyRole = require("../middleware/checkRole");
 const multer = require("multer")();
 
 router.post("/", verifyToken, multer.single("image"), categoryController.createCategory);
-router.get("/", verifyToken, categoryController.getAll);
+router.get("/", categoryController.getAll);
 router.delete("/:id", verifyToken, verifyRole(4), categoryController.deleteCategory);
 router.put("/:id", verifyToken, verifyRole(4), categoryController.updateCategory);
 
