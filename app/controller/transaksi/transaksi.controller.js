@@ -247,10 +247,7 @@ exports.getSalesHistory = async (req, res) => {
       return res.status(404).json({ message: "Tidak ada riwayat penjualan." });
     }
 
-    console.log('Fetched sales rows:', rows);
-
     const salesHistory = rows.map(sale => {
-      console.log('Processing sale:', sale);
       return {
         transactionId: sale.Transaksi.id,
         totalHarga: sale.jumlah * sale.Barang.harga,
@@ -267,8 +264,6 @@ exports.getSalesHistory = async (req, res) => {
         }
       };
     });
-
-    console.log('Processed sales history:', salesHistory);
 
     const totalPages = Math.ceil(count / limit);
 
@@ -344,3 +339,109 @@ exports.BarangDiterima = async (req, res) => {
   }
 };
 
+exports.getAllTransaksi = async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+
+  try {
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Transaksi.findAndCountAll({
+      offset,
+      limit,
+      attributes: ['id', 'totalHarga', 'alamatPengiriman', 'waktuPengambilan', 'createdAt', 'updatedAt'],
+      include: [
+        {
+          model: detailTransaksi,
+          attributes: ['jumlah', 'hargaItem', 'totalHarga'],
+          include: [
+            {
+              model: Barang,
+              attributes: ['nama', 'harga', 'urlGambar', 'userId'],
+              include: [
+                {
+                  model: Kategori,
+                  attributes: ['potonganHarga'],
+                  required: false
+                }
+              ],
+              required: false
+            }
+          ],
+          required: false
+        },
+        {
+          model: statusPengiriman,
+          attributes: ['statusPengirimanName'],
+          required: false
+        },
+        {
+          model: metodePengiriman,
+          attributes: ['metodePengirimanName'],
+          required: false
+        },
+        {
+          model: User,
+          attributes: ['name'],
+          required: false
+        }
+      ]
+    });
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Tidak ada transaksi." });
+    }
+
+    // Fetch seller names
+    const sellerIds = rows.flatMap(transaction => 
+      transaction.detailTransaksis.map(item => item.Barang?.userId).filter(Boolean)
+    );
+    const uniqueSellerIds = [...new Set(sellerIds)];
+    const sellers = await User.findAll({
+      where: { id: uniqueSellerIds },
+      attributes: ['id', 'name']
+    });
+    const sellerMap = Object.fromEntries(sellers.map(seller => [seller.id, seller.name]));
+
+    const transactions = rows.map(transaction => ({
+      transactionId: transaction.id,
+      totalHarga: transaction.totalHarga,
+      alamatPengiriman: transaction.alamatPengiriman,
+      waktuPengambilan: transaction.waktuPengambilan,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
+      buyer: transaction.User?.name || "Unknown Buyer",
+      items: transaction.detailTransaksis.map(item => {
+        const potonganHarga = item.Barang?.Kategori?.potonganHarga || 0;
+        const hargaFinal = item.Barang?.harga + potonganHarga;
+        return {
+          name: item.Barang?.nama || "Unknown Item",
+          price: hargaFinal,
+          imageUrl: item.Barang?.urlGambar || "",
+          jumlah: item.jumlah,
+          hargaItem: hargaFinal,
+          totalHargaItem: item.jumlah * hargaFinal,
+          seller: sellerMap[item.Barang?.userId] || "Unknown Seller"
+        };
+      }),
+      statusPengiriman: transaction.statusPengiriman?.statusPengirimanName || "Unknown Status",
+      metodePengiriman: transaction.metodePengiriman?.metodePengirimanName || "Unknown Method"
+    }));
+
+    const totalPages = Math.ceil(count / limit);
+
+    return res.status(200).json({
+      status: 'success',
+      message: "Transaksi ditemukan.",
+      data: transactions,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalRecords: count
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    return res.status(500).json({ status: 'error', message: "Kesalahan server saat mengambil transaksi.", error: error.message });
+  }
+};

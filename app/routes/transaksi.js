@@ -13,6 +13,7 @@ router.get(
 );
 
 router.get("/getSalesHistory", verifyToken, verifyRole(1), transaksicontroller.getSalesHistory);
+router.get("/getAllTransaksi", verifyToken, verifyRole(4), transaksicontroller.getAllTransaksi);
 
 router.post(
   "/Konfirmasi/:transaksiId",
