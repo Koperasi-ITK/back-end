@@ -79,72 +79,87 @@ exports.hapusBarang = async (req, res) => {
 };
 
 exports.getSemuaBarang = async (req, res) => {
-    try {
-        const { id, nama, kategori, page = 1, limit = 10 } = req.query;
-        const whereClause = {};
-        const includeClause = [];
+  try {
+      const { id, nama, kategori, page = 1, limit = 10 } = req.query;
+      const whereClause = {};
+      const includeClause = [
+          {
+              model: Kategori,
+              attributes: ['namaKategori', 'potonganHarga']
+          }
+      ];
 
-        if (id) {
-            whereClause.id = id;
-        }
+      if (id) {
+          whereClause.id = id;
+      }
 
-        if (nama) {
-            whereClause.nama = {
-                [Op.like]: `%${nama.toLowerCase()}%`
-            };
-        }
+      if (nama) {
+          whereClause.nama = {
+              [Op.like]: `%${nama.toLowerCase()}%`
+          };
+      }
 
-        if (kategori) {
-            includeClause.push({
-                model: Kategori,
-                attributes: ['namaKategori'],
-                where: {
-                    namaKategori: {
-                        [Op.like]: `%${kategori.toLowerCase()}%`
-                    }
-                }
-            });
-        } else {
-            includeClause.push({
-                model: Kategori,
-                attributes: ['namaKategori']
-            });
-        }
+      if (kategori) {
+          includeClause.push({
+              model: Kategori,
+              attributes: ['namaKategori', 'potonganHarga'],
+              where: {
+                  namaKategori: {
+                      [Op.like]: `%${kategori.toLowerCase()}%`
+                  }
+              }
+          });
+      } else {
+          includeClause.push({
+              model: Kategori,
+              attributes: ['namaKategori', 'potonganHarga']
+          });
+      }
 
-        includeClause.push(
-            {
-                model: statusStok,
-                attributes: ['statusStok']
-            },
-            {
-                model: User,
-                attributes: ['name']
-            }
-        );
+      includeClause.push(
+          {
+              model: statusStok,
+              attributes: ['statusStok']
+          },
+          {
+              model: User,
+              attributes: ['name']
+          }
+      );
 
-        const offset = (page - 1) * limit;
-        const semuaBarang = await Barang.findAndCountAll({
-            where: whereClause,
-            attributes: ['id', 'nama', 'harga', 'urlGambar', 'stok'],
-            include: includeClause,
-            offset: offset,
-            limit: parseInt(limit)
-        });
+      const offset = (page - 1) * limit;
+      const semuaBarang = await Barang.findAndCountAll({
+          where: whereClause,
+          attributes: ['id', 'nama', 'harga', 'urlGambar', 'stok'],
+          include: includeClause,
+          offset: offset,
+          limit: parseInt(limit)
+      });
 
-        if (semuaBarang.rows.length === 0) {
-            return res.status(404).json(utils.apiError("Barang tidak ditemukan atau kosong"));
-        }
+      if (semuaBarang.rows.length === 0) {
+          return res.status(404).json(utils.apiError("Barang tidak ditemukan atau kosong"));
+      }
 
-        res.status(200).json(utils.apiSuccess("Semua barang berhasil diambil", {
-            totalItems: semuaBarang.count,
-            totalPages: Math.ceil(semuaBarang.count / limit),
-            currentPage: page,
-            items: semuaBarang.rows
-        }));
-    } catch (error) {
-        console.error(error);
-        res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
-    }
+      const items = semuaBarang.rows.map(item => {
+          const hargaAsli = item.harga;
+          const potonganHarga = item.Kategori.potonganHarga || 0;
+          const hargaFinal = hargaAsli + potonganHarga;
+          return {
+              ...item.get(),
+              harga: hargaFinal
+          };
+      });
+
+      res.status(200).json(utils.apiSuccess("Semua barang berhasil diambil", {
+          totalItems: semuaBarang.count,
+          totalPages: Math.ceil(semuaBarang.count / limit),
+          currentPage: page,
+          items: items
+      }));
+  } catch (error) {
+      console.error(error);
+      res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+  }
 };
 
 exports.getBarangPenjual = async (req, res) => {

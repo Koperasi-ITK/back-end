@@ -1,6 +1,7 @@
-const {Keranjang,itemKeranjang,Barang,Transaksi,detailTransaksi,User,Saldo,metodePengiriman, statusPengiriman} = require("../../models");
+const {Pendapatan,Keranjang,itemKeranjang,Barang,Transaksi,detailTransaksi,User,Saldo,metodePengiriman, statusPengiriman,Kategori} = require("../../models");
 const utils = require("../../../utils/utils");
 const { Op } = require('sequelize');
+const barang = require("../../models/barang");
 
 exports.checkout = async (req, res) => {
   const userId = res.locals.user.id;
@@ -9,7 +10,13 @@ exports.checkout = async (req, res) => {
   try {
       const keranjang = await Keranjang.findOne({
           where: { userId },
-          include: [{ model: itemKeranjang, include: [Barang] }]
+          include: [{ 
+            model: itemKeranjang, 
+            include: [{ 
+              model: Barang,
+              include: [{ model: Kategori }] 
+            }] 
+          }]
       });
 
       if (!keranjang || keranjang.itemKeranjangs.length === 0) {
@@ -34,7 +41,11 @@ exports.checkout = async (req, res) => {
           return res.status(400).json(utils.apiError("Metode pengiriman atau status pengiriman tidak valid."));
       }
 
-      let totalHarga = keranjang.itemKeranjangs.reduce((acc, item) => acc + (item.jumlah * item.Barang.harga), 0);
+      let totalHarga = keranjang.itemKeranjangs.reduce((acc, item) => {
+        const potonganHarga = item.Barang.Kategori.potonganHarga || 0;
+        const hargaFinal = item.Barang.harga + potonganHarga;
+        return acc + (item.jumlah * hargaFinal);
+      }, 0);
       
       const saldo = await Saldo.findOne({ where: { userId } });
       if (!saldo || saldo.saldoIuranSukarela < totalHarga) {
@@ -62,13 +73,15 @@ exports.checkout = async (req, res) => {
       });
 
       for (const item of keranjang.itemKeranjangs) {
+          const potonganHarga = item.Barang.Kategori.potonganHarga || 0;
+          const hargaFinal = item.Barang.harga + potonganHarga;
           await Barang.update({ stok: item.Barang.stok - item.jumlah }, { where: { id: item.barangId } });
           await detailTransaksi.create({
               transaksiId: transaksi.id,
               barangId: item.barangId,
               jumlah: item.jumlah,
-              hargaItem: item.Barang.harga,
-              totalHarga: item.jumlah * item.Barang.harga,
+              hargaItem: hargaFinal,
+              totalHarga: item.jumlah * hargaFinal,
               createdAt: new Date(),
               updatedAt: new Date()
           });
@@ -151,7 +164,8 @@ exports.getTransaksi = async (req, res) => {
           model: detailTransaksi,
           include: [{
             model: Barang,
-            attributes: ['nama', 'harga', 'urlGambar']
+            attributes: ['nama', 'harga', 'urlGambar'],
+            include: [{ model: Kategori, attributes: ['potonganHarga'] }]
           }],
           attributes: ['jumlah', 'hargaItem', 'totalHarga']
         },
@@ -177,14 +191,18 @@ exports.getTransaksi = async (req, res) => {
       alamatPengiriman: transaction.alamatPengiriman,
       waktuPengambilan: transaction.waktuPengambilan,
       createdAt: transaction.createdAt,
-      items: transaction.detailTransaksis.map(item => ({
-        name: item.Barang.nama,
-        price: item.Barang.harga,
-        ImageUrl: item.Barang.urlGambar,
-        jumlah: item.jumlah,
-        HargaItem: item.hargaItem,
-        totalHargaItem: item.totalHarga
-      })),
+      items: transaction.detailTransaksis.map(item => {
+        const potonganHarga = item.Barang.Kategori.potonganHarga || 0;
+        const hargaFinal = item.Barang.harga + potonganHarga;
+        return {
+          name: item.Barang.nama,
+          price: hargaFinal,
+          ImageUrl: item.Barang.urlGambar,
+          jumlah: item.jumlah,
+          HargaItem: hargaFinal,
+          totalHargaItem: item.jumlah * hargaFinal
+        }
+      }),
       StatusPengiriman: transaction.statusPengiriman.statusPengirimanName,
       MetodePengiriman: transaction.metodePengiriman.metodePengirimanName
     }));
@@ -219,7 +237,8 @@ exports.getSalesHistory = async (req, res) => {
         {
           model: Barang,
           where: { userId: sellerId },
-          attributes: ['nama', 'harga', 'urlGambar']
+          attributes: ['nama', 'harga', 'urlGambar'],
+          include: [{ model: Kategori, attributes: ['potonganHarga'] }]
         }
       ]
     });
@@ -228,21 +247,28 @@ exports.getSalesHistory = async (req, res) => {
       return res.status(404).json({ message: "Tidak ada riwayat penjualan." });
     }
 
-    const salesHistory = rows.map(sale => ({
-      transactionId: sale.Transaksi.id,
-      totalHarga: sale.Transaksi.totalHarga,
-      statusPengiriman: sale.Transaksi.statusPengiriman.statusPengirimanName,
-      createdAt: sale.Transaksi.createdAt,
-      updatedAt: sale.Transaksi.updatedAt,
-      item: {
-        name: sale.Barang.nama,
-        price: sale.Barang.harga,
-        ImageUrl: sale.Barang.urlGambar,
-        jumlah: sale.jumlah,
-        hargaItem: sale.hargaItem,
-        totalHargaItem: sale.totalHarga
-      }
-    }));
+    console.log('Fetched sales rows:', rows);
+
+    const salesHistory = rows.map(sale => {
+      console.log('Processing sale:', sale);
+      return {
+        transactionId: sale.Transaksi.id,
+        totalHarga: sale.jumlah * sale.Barang.harga,
+        statusPengiriman: sale.Transaksi.statusPengiriman.statusPengirimanName,
+        createdAt: sale.Transaksi.createdAt,
+        updatedAt: sale.Transaksi.updatedAt,
+        item: {
+          name: sale.Barang.nama,
+          price: sale.Barang.harga,
+          ImageUrl: sale.Barang.urlGambar,
+          jumlah: sale.jumlah,
+          hargaItem: sale.Barang.harga,
+          totalHargaItem: sale.jumlah * sale.Barang.harga
+        }
+      };
+    });
+
+    console.log('Processed sales history:', salesHistory);
 
     const totalPages = Math.ceil(count / limit);
 
@@ -257,29 +283,40 @@ exports.getSalesHistory = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching sales history:', error);
     return res.status(500).json({ status: 'error', message: "Kesalahan server saat mengambil riwayat penjualan.", error: error.message });
   }
 };
 
 async function distributeFunds(transaksiId) {
   const detailTransaksis = await detailTransaksi.findAll({
-      where: { transaksiId },
-      include: [{ model: Barang }]
+    where: { transaksiId },
+    include: [{ model: Barang, include: [{ model: Kategori }] }]
   });
+
   for (const detail of detailTransaksis) {
-      const barang = await Barang.findOne({
-          where: { id: detail.barangId }
-      });
-      const sellerId = barang.userId;
-      const hargaItem = detail.totalHarga;
-      const saldo = await Saldo.findOne({
-          where: { userId: sellerId }
-      });
-      if (saldo) {
-          saldo.saldoPenjualan += hargaItem;
-          await saldo.save();
-      }
+    const barang = detail.Barang;
+    const sellerId = barang.userId;
+    const originalHarga = barang.harga;
+    const potonganHarga = barang.Kategori.potonganHarga || 0;
+    const hargaItem = originalHarga * detail.jumlah;
+    const pendapatanPlatform = potonganHarga * detail.jumlah;
+
+    const saldo = await Saldo.findOne({
+      where: { userId: sellerId }
+    });
+
+    if (saldo) {
+      saldo.saldoPenjualan += hargaItem;
+      await saldo.save();
+    }
+
+    await Pendapatan.create({
+      transaksiId,
+      categoryRevenue: pendapatanPlatform,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
   }
 }
 
@@ -288,23 +325,22 @@ exports.BarangDiterima = async (req, res) => {
   const userId = res.locals.user.id;
 
   try {
-      const transaksi = await Transaksi.findOne({
-          where: { id: transaksiId, userId, statusPengirimanId: { [Op.not]: 8 } }
-      });
+    const transaksi = await Transaksi.findOne({
+      where: { id: transaksiId, userId, statusPengirimanId: { [Op.not]: 8 } }
+    });
 
-      if (!transaksi) {
-          return res.status(404).json({ message: "Transaksi tidak ditemukan atau sudah dikonfirmasi." });
-      }
-      transaksi.statusPengirimanId = 8;
-      await transaksi.save();
+    if (!transaksi) {
+      return res.status(404).json({ message: "Transaksi tidak ditemukan atau sudah dikonfirmasi." });
+    }
+    transaksi.statusPengirimanId = 8;
+    await transaksi.save();
 
-      await distributeFunds(transaksiId);
+    await distributeFunds(transaksiId);
 
-      return res.status(200).json({ message: "Konfirmasi penerimaan berhasil." });
+    return res.status(200).json({ message: "Konfirmasi penerimaan berhasil." });
   } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: "Kesalahan server saat mengkonfirmasi penerimaan.", error: error.message });
+    console.error(error);
+    return res.status(500).json({ message: "Kesalahan server saat mengkonfirmasi penerimaan.", error: error.message });
   }
 };
-
 

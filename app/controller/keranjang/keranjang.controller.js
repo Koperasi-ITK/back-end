@@ -1,4 +1,4 @@
-const { Keranjang, itemKeranjang, Barang, User } = require("../../models");
+const { Keranjang, itemKeranjang, Barang, User,Kategori } = require("../../models");
 const utils = require("../../../utils/utils");
 
 exports.tambahKeKeranjang = async (req, res) => {
@@ -46,59 +46,71 @@ exports.tambahKeKeranjang = async (req, res) => {
 };
 
 exports.getBarangDiKeranjang = async (req, res) => {
-    const userId = res.locals.user.id;
-  
-    try {
-      const keranjang = await Keranjang.findOne({ where: { userId } });
-      if (!keranjang) {
-        return res.status(404).json(utils.apiError("Keranjang tidak ditemukan"));
-      }
-  
-      let items = await itemKeranjang.findAll({
-        where: { keranjangId: keranjang.id },
+  const userId = res.locals.user.id;
+
+  try {
+    const keranjang = await Keranjang.findOne({ where: { userId } });
+    if (!keranjang) {
+      return res.status(404).json(utils.apiError("Keranjang tidak ditemukan"));
+    }
+
+    let items = await itemKeranjang.findAll({
+      where: { keranjangId: keranjang.id },
+      include: [{
+        model: Barang,
+        as: 'Barang',
+        attributes: ['nama', 'harga', 'urlGambar', 'stok', 'statusStokId'],
         include: [{
-          model: Barang,
-          as: 'Barang',
-          attributes: ['nama', 'harga', 'urlGambar', 'stok', 'statusStokId']
+          model: Kategori,
+          attributes: ['potonganHarga']
         }]
-      });
-  
-      if (items.length === 0) {
-        return res.status(200).json(utils.apiSuccess("Keranjang kosong", []));
+      }]
+    });
+
+    if (items.length === 0) {
+      return res.status(200).json(utils.apiSuccess("Keranjang kosong", []));
+    }
+
+    let itemsToRemove = [];
+    for (const item of items) {
+      if (item.Barang.stok === 0 || item.Barang.statusStokId === 2) {
+        itemsToRemove.push(item.id);
       }
-  
-      let itemsToRemove = [];
-      for (const item of items) {
-        if (item.Barang.stok === 0 || item.Barang.statusStokId === 2) {
-          itemsToRemove.push(item.id);
-        }
-      }
-  
-      if (itemsToRemove.length > 0) {
-        await itemKeranjang.destroy({ where: { id: itemsToRemove } });
-        items = items.filter(item => !itemsToRemove.includes(item.id));
-      }
-  
-      const totalHarga = items.reduce((sum, item) => sum + (item.Barang.harga * item.jumlah), 0);
-  
-      const simplifiedItems = items.map(item => ({
+    }
+
+    if (itemsToRemove.length > 0) {
+      await itemKeranjang.destroy({ where: { id: itemsToRemove } });
+      items = items.filter(item => !itemsToRemove.includes(item.id));
+    }
+
+    const totalHarga = items.reduce((sum, item) => {
+      const potonganHarga = item.Barang.Kategori.potonganHarga || 0;
+      const hargaFinal = item.Barang.harga + potonganHarga;
+      return sum + (hargaFinal * item.jumlah);
+    }, 0);
+
+    const simplifiedItems = items.map(item => {
+      const potonganHarga = item.Barang.Kategori.potonganHarga || 0;
+      const hargaFinal = item.Barang.harga + potonganHarga;
+      return {
         id: item.id,
         namaBarang: item.Barang.nama,
-        harga: item.Barang.harga,
+        harga: hargaFinal, // Adjusted price with potonganHarga
         jumlah: item.jumlah,
-        subTotal: item.Barang.harga * item.jumlah,
+        subTotal: hargaFinal * item.jumlah, // Adjusted subtotal with potonganHarga
         urlGambar: item.Barang.urlGambar
-      }));
-  
-      return res.status(200).json(utils.apiSuccess("Item di keranjang", {
-        items: simplifiedItems,
-        totalHarga
-      }));
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
-    }
-  };
+      };
+    });
+
+    return res.status(200).json(utils.apiSuccess("Item di keranjang", {
+      items: simplifiedItems,
+      totalHarga
+    }));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+  }
+};
 
 exports.hapusDariKeranjang = async (req, res) => {
     const userId = res.locals.user.id;
