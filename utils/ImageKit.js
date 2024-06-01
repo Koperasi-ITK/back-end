@@ -24,12 +24,10 @@ module.exports = {
   },
   delete: async (fileName) => {
     try {
-      // console.log(fileName);
+      // console.log("Deleting file: ", fileName);
       const file = await imageKit.listFiles({
         searchQuery: `name = "${fileName}"`,
       });
-
-      console.log(file);
 
       await imageKit.deleteFile(file[0].fileId);
 

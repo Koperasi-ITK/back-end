@@ -1,4 +1,4 @@
-const {Pendapatan,Keranjang,itemKeranjang,Barang,Transaksi,detailTransaksi,User,Saldo,metodePengiriman, statusPengiriman,Kategori} = require("../../models");
+const {Pendapatan,Keranjang,itemKeranjang,Barang,Transaksi,detailTransaksi,User,Saldo,metodePengiriman, statusPengiriman,Kategori,Biaya} = require("../../models");
 const utils = require("../../../utils/utils");
 const { Op } = require('sequelize');
 const barang = require("../../models/barang");
@@ -46,7 +46,17 @@ exports.checkout = async (req, res) => {
         const hargaFinal = item.Barang.harga + potonganHarga;
         return acc + (item.jumlah * hargaFinal);
       }, 0);
-      
+
+      const biayaEntry = await Biaya.findOne();
+      if (!biayaEntry) {
+          return res.status(500).json(utils.apiError("Biaya pengantaran tidak ditemukan."));
+      }
+
+      if (metodePengirimanEntry.metodePengirimanName === 'Diantar') {
+          totalHarga += biayaEntry.BiayaAntar;
+
+      }
+
       const saldo = await Saldo.findOne({ where: { userId } });
       if (!saldo || saldo.saldoIuranSukarela < totalHarga) {
           return res.status(400).json(utils.apiError("Saldo tidak cukup."));
@@ -122,6 +132,13 @@ exports.cancelCheckout = async (req, res) => {
           totalRefund += detail.totalHarga;
           await Barang.increment('stok', { by: detail.jumlah, where: { id: detail.barangId } });
       }
+
+      const metodePengirimanEntry = await metodePengiriman.findOne({ where: { id: transaksi.metodePengirimanId } });
+      const biayaEntry = await Biaya.findOne();
+      if (metodePengirimanEntry && metodePengirimanEntry.metodePengirimanName === 'Diantar' && biayaEntry) {
+          totalRefund += biayaEntry.BiayaAntar;
+      }
+
       const saldo = await Saldo.findOne({ where: { userId } });
       if (!saldo) {
           return res.status(400).json(utils.apiError("Saldo tidak ditemukan."));
@@ -129,7 +146,7 @@ exports.cancelCheckout = async (req, res) => {
       saldo.saldoIuranSukarela += totalRefund;
       await saldo.save();
 
-      // kalau mau destroy di detail transaksi
+      // Uncomment the following lines if you want to delete the detail transaksi records
       // await detailTransaksi.destroy({
       //   where: { transaksiId: transaksi.id }
       // });
