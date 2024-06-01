@@ -325,10 +325,21 @@ async function distributeFunds(transaksiId) {
 
     await Pendapatan.create({
       transaksiId,
+      shippingRevenue: 0,
       categoryRevenue: pendapatanPlatform,
       createdAt: new Date(),
       updatedAt: new Date()
     });
+  }
+
+  const transaksi = await Transaksi.findOne({ where: { id: transaksiId } });
+  const metodePengirimanEntry = await metodePengiriman.findOne({ where: { id: transaksi.metodePengirimanId } });
+  const biayaEntry = await Biaya.findOne();
+  
+  if (metodePengirimanEntry && metodePengirimanEntry.metodePengirimanName === 'Diantar' && biayaEntry) {
+    const pendapatan = await Pendapatan.findOne({ where: { transaksiId } });
+    pendapatan.shippingRevenue = biayaEntry.BiayaAntar;
+    await pendapatan.save();
   }
 }
 
