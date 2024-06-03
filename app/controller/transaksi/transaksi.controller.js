@@ -370,13 +370,24 @@ exports.BarangDiterima = async (req, res) => {
 exports.getAllTransaksi = async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
+  const status = req.query.status || 'all';
 
   try {
     const offset = (page - 1) * limit;
 
+    let statusCondition = {};
+    if (status === 'canceled') {
+      statusCondition = { statusPengirimanId: [11, 12] };
+    } else if (status === 'ongoing') {
+      statusCondition = { statusPengirimanId: [3, 4, 5, 6, 7] };
+    } else if (status === 'successful') {
+      statusCondition = { statusPengirimanId: 8 };
+    }
+
     const { count, rows } = await Transaksi.findAndCountAll({
       offset,
       limit,
+      where: statusCondition,
       attributes: ['id', 'totalHarga', 'alamatPengiriman', 'waktuPengambilan', 'createdAt', 'updatedAt'],
       include: [
         {
@@ -471,5 +482,54 @@ exports.getAllTransaksi = async (req, res) => {
   } catch (error) {
     console.error('Error fetching transactions:', error);
     return res.status(500).json({ status: 'error', message: "Kesalahan server saat mengambil transaksi.", error: error.message });
+  }
+};
+
+//cancel co by pegawai
+exports.cancelCheckoutByEmployee = async (req, res) => {
+  const { transaksiId } = req.body;
+  console.log("ini :",transaksiId)
+  try {
+      const transaksi = await Transaksi.findOne({
+          where: { id: transaksiId }
+      });
+
+      if (!transaksi) {
+          return res.status(404).json(utils.apiError("Transaksi tidak ditemukan."));
+      }
+      const cancelledStatus = await statusPengiriman.findOne({ where: { statusPengirimanName: 'Transaksi Dibatalkan' } });
+      if (!cancelledStatus) {
+          return res.status(404).json(utils.apiError("Status pembatalan tidak ditemukan."));
+      }
+
+      const detailTransaksiRecords = await detailTransaksi.findAll({
+          where: { transaksiId: transaksi.id }
+      });
+
+      let totalRefund = 0;
+      for (const detail of detailTransaksiRecords) {
+          totalRefund += detail.totalHarga;
+          await Barang.increment('stok', { by: detail.jumlah, where: { id: detail.barangId } });
+      }
+
+      const metodePengirimanEntry = await metodePengiriman.findOne({ where: { id: transaksi.metodePengirimanId } });
+      const biayaEntry = await Biaya.findOne();
+      if (metodePengirimanEntry && metodePengirimanEntry.metodePengirimanName === 'Diantar' && biayaEntry) {
+          totalRefund += biayaEntry.BiayaAntar;
+      }
+
+      const saldo = await Saldo.findOne({ where: { userId: transaksi.userId } });
+      if (!saldo) {
+          return res.status(400).json(utils.apiError("Saldo tidak ditemukan."));
+      }
+      saldo.saldoIuranSukarela += totalRefund;
+      await saldo.save();
+
+      await transaksi.update({ statusPengirimanId: cancelledStatus.id });
+
+      return res.status(200).json(utils.apiSuccess("Pembatalan checkout berhasil oleh pegawai. Saldo dan stok barang telah dikembalikan."));
+  } catch (error) {
+      console.error(error);
+      return res.status(500).json(utils.apiError("Kesalahan pada internal server.", { error: error.message }));
   }
 };

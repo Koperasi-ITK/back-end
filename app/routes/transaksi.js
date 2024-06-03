@@ -11,9 +11,9 @@ router.get(
   verifyRole(1),
   transaksicontroller.getTransaksi
 );
-
+router.post('/cancel-checkout-by-employee', verifyToken,verifyRole(3), transaksicontroller.cancelCheckoutByEmployee);
 router.get("/getSalesHistory", verifyToken, verifyRole(1), transaksicontroller.getSalesHistory);
-router.get("/getAllTransaksi", verifyToken, verifyRole(4), transaksicontroller.getAllTransaksi);
+router.get("/getAllTransaksi", verifyToken, verifyRole(4,3), transaksicontroller.getAllTransaksi);
 
 router.post(
   "/Konfirmasi/:transaksiId",
