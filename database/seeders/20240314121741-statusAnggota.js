@@ -13,6 +13,9 @@ module.exports = {
       {
         statusName: "Bukan Member",
       },
+      {
+        statusName: "Dihapus",
+      },
     ]);
   },
 

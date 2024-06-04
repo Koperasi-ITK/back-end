@@ -56,7 +56,7 @@ exports.hapusBarang = async (req, res) => {
             return res.status(404).json(utils.apiError("Barang tidak ditemukan"));
         }
         console.log(`User ID: ${userId}, User Role: ${userRole}, Barang User ID: ${barang.userId}`);
-        if (barang.userId !== userId && userRole !== 4) {
+        if (barang.userId !== userId && userRole !== 4 && userRole !== 3) {
             return res.status(403).json(utils.apiError("Anda tidak memiliki izin untuk menghapus barang ini"));
         }
 

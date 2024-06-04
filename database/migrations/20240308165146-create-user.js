@@ -1,4 +1,7 @@
 "use strict";
+
+const { sequelize } = require('../../app/models');
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
@@ -35,6 +38,10 @@ module.exports = {
       urlProfile: {
         type: Sequelize.STRING,
       },
+      AktifSampai: {
+        allowNull: true,
+        type: Sequelize.DATE,
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
@@ -44,8 +51,32 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
-  },
-  async down(queryInterface, Sequelize) {
+  await queryInterface.sequelize.query(`
+    CREATE TRIGGER update_status_anggota
+    BEFORE UPDATE ON Users
+    FOR EACH ROW
+    BEGIN
+      DECLARE activeStatusId INT;
+      DECLARE inactiveStatusId INT;
+
+      SET activeStatusId = (SELECT id FROM statusAnggota WHERE statusName = 'Aktif');
+      SET inactiveStatusId = (SELECT id FROM statusAnggota WHERE statusName = 'Tidak Aktif');
+
+      IF NEW.AktifSampai IS NOT NULL THEN
+        IF NEW.AktifSampai < NOW() THEN
+          SET NEW.statusAnggotaId = inactiveStatusId;
+        ELSE
+          SET NEW.statusAnggotaId = activeStatusId;
+        END IF;
+      END IF;
+    END
+  `);
+},
+
+async down(queryInterface, Sequelize) {
+  await queryInterface.sequelize.query(`
+    DROP TRIGGER IF EXISTS update_status_anggota;
+  `);
     await queryInterface.dropTable("Users");
   },
 };
