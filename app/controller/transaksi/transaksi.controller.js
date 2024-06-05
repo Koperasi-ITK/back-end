@@ -371,6 +371,7 @@ exports.getAllTransaksi = async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
   const status = req.query.status || 'all';
+  const filter = req.query.filter ? req.query.filter.split(',').map(Number) : [];
 
   try {
     const offset = (page - 1) * limit;
@@ -380,6 +381,9 @@ exports.getAllTransaksi = async (req, res) => {
       statusCondition = { statusPengirimanId: [11, 12] };
     } else if (status === 'ongoing') {
       statusCondition = { statusPengirimanId: [3, 4, 5, 6, 7] };
+      if (filter.length) {
+        statusCondition = { statusPengirimanId: filter };
+      }
     } else if (status === 'successful') {
       statusCondition = { statusPengirimanId: 8 };
     }
@@ -388,6 +392,7 @@ exports.getAllTransaksi = async (req, res) => {
       offset,
       limit,
       where: statusCondition,
+      order: [['createdAt', 'DESC']],
       attributes: ['id', 'totalHarga', 'alamatPengiriman', 'waktuPengambilan', 'createdAt', 'updatedAt'],
       include: [
         {

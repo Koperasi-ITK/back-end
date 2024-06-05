@@ -72,7 +72,6 @@ exports.getBarangDiKeranjang = async (req, res) => {
     }
 
     let itemsToRemove = [];
-    items = items.filter(item => item.Barang !== null);
     for (const item of items) {
       if (!item.Barang || item.Barang.stok === 0 || item.Barang.statusStokId === 2) {
         itemsToRemove.push(item.id);
@@ -81,7 +80,22 @@ exports.getBarangDiKeranjang = async (req, res) => {
 
     if (itemsToRemove.length > 0) {
       await itemKeranjang.destroy({ where: { id: itemsToRemove } });
-      items = items.filter(item => !itemsToRemove.includes(item.id));
+      items = await itemKeranjang.findAll({
+        where: { keranjangId: keranjang.id },
+        include: [{
+          model: Barang,
+          as: 'Barang',
+          attributes: ['nama', 'harga', 'urlGambar', 'stok', 'statusStokId'],
+          include: [{
+            model: Kategori,
+            attributes: ['potonganHarga']
+          }]
+        }]
+      });
+    }
+
+    if (items.length === 0) {
+      return res.status(200).json(utils.apiSuccess("Keranjang kosong setelah penghapusan item yang tidak tersedia", []));
     }
 
     const totalHarga = items.reduce((sum, item) => {

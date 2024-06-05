@@ -247,7 +247,6 @@ exports.getBarangPenjual = async (req, res) => {
         items: barangPenjual.rows
       }));
     } catch (error) {
-      console.log(error);
       res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
     }
   };

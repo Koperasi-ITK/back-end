@@ -7,16 +7,16 @@ const { Op } = require("sequelize");
 
 const getUser = async (req, res) => {
   try {
-    const { id, name } = req.query;
+    const { id, email } = req.query;
     let whereClause = {};
 
     if (id) {
       whereClause.id = id;
     }
 
-    if (name) {
-      whereClause.name = {
-        [Op.like]: `%${name}%`,
+    if (email) {
+      whereClause.email = {
+        [Op.like]: `%${email}%`,
       };
     }
 
@@ -260,15 +260,14 @@ const updateAktor = async (req, res) => {
     if (noTelp !== undefined) updatedUserFields.noTelp = noTelp;
     if (AktifSampai !== undefined && statusAnggotaId === undefined) updatedUserFields.AktifSampai = AktifSampai;
 
-    if (statusAnggotaId !== undefined) {
+    if (statusAnggotaId !== undefined && statusAnggotaId !== user.statusAnggotaId) {
       await User.update({ AktifSampai: null }, { where: { id: user.id } });
+      await User.update({ statusAnggotaId: statusAnggotaId }, { where: { id: user.id } });
+    } else if (statusAnggotaId !== undefined) {
+      updatedUserFields.statusAnggotaId = statusAnggotaId;
     }
 
     await User.update(updatedUserFields, { where: { id: user.id } });
-
-    if (statusAnggotaId !== undefined) {
-      await User.update({ statusAnggotaId: statusAnggotaId }, { where: { id: user.id } });
-    }
 
     const updatedSaldoFields = {};
     if (saldoIuranWajib !== undefined) updatedSaldoFields.saldoIuranWajib = saldoIuranWajib;
