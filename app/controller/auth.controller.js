@@ -1,5 +1,5 @@
 const utils = require("../../utils/utils");
-const { User, Saldo } = require("../models");
+const { User, Saldo , statusAnggota} = require("../models");
 
 const register = async (req, res, next) => {
   try {
@@ -64,9 +64,13 @@ const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({
-      where: {
-        email,
-      },
+      where: { email },
+      include: [
+        {
+          model: statusAnggota,
+          attributes: ["statusName"]
+        }
+      ]
     });
 
     if (!user) return res.status(400).json(utils.apiError("Email tidak terdaftar"));
@@ -74,6 +78,12 @@ const login = async (req, res, next) => {
     const verifyPassword = await utils.verifyHashData(password, user.password);
 
     if (!verifyPassword) return res.status(409).json(utils.apiError("Password salah"));
+
+    const statusAnggotaName = user.statusAnggotum ? user.statusAnggotum.statusName : "Status tidak ditemukan";
+
+    if (statusAnggotaName === "Bukan Member" || statusAnggotaName === "Dihapus") {
+      return res.status(403).json(utils.apiError("Akun Anda tidak diizinkan untuk login"));
+    }
 
     const payload = { id: user.id, role: user.roleId };
 
@@ -85,6 +95,7 @@ const login = async (req, res, next) => {
 
     return res.status(200).json(utils.apiSuccess("Login Berhasil", data));
   } catch (error) {
+    console.error(error);
     return res.status(500).json(utils.apiError("kesalahan pada internal server"));
   }
 };

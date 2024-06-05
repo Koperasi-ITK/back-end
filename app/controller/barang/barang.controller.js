@@ -1,6 +1,6 @@
 const utils = require("../../../utils/utils");
 const ImageKitFile = require("../../../utils/ImageKit");
-const { Barang, Kategori, statusStok, User } = require("../../models");
+const { Barang, Kategori, statusStok, User,statusAnggota } = require("../../models");
 const { Op } = require('sequelize');
 
 exports.tambahBarang = async (req, res) => {
@@ -20,6 +20,12 @@ exports.tambahBarang = async (req, res) => {
 
     if (image.size / (1024 * 1024) > allowedSizeMb)
       return res.status(409).json(utils.apiError("Gambar tidak boleh lebih dari 2mb"));
+
+    if (harga <= 0)
+      return res.status(400).json(utils.apiError("Harga harus lebih dari 0"));
+
+    if (stok < 0)
+      return res.status(400).json(utils.apiError("Stok tidak boleh kurang dari 0"));
 
     const uploadFile = await ImageKitFile.upload(image);
 
@@ -86,6 +92,24 @@ exports.getSemuaBarang = async (req, res) => {
           {
               model: Kategori,
               attributes: ['namaKategori', 'potonganHarga']
+          },
+          {
+              model: User,
+              attributes: ['name'],
+              include: [
+                  {
+                      model: statusAnggota,
+                      attributes: ['statusName'],
+                      where: {
+                          statusName: 'Aktif'
+                      }
+                  }
+              ],
+              required: true
+          },
+          {
+              model: statusStok,
+              attributes: ['statusStok']
           }
       ];
 
@@ -109,23 +133,7 @@ exports.getSemuaBarang = async (req, res) => {
                   }
               }
           });
-      } else {
-          includeClause.push({
-              model: Kategori,
-              attributes: ['namaKategori', 'potonganHarga']
-          });
       }
-
-      includeClause.push(
-          {
-              model: statusStok,
-              attributes: ['statusStok']
-          },
-          {
-              model: User,
-              attributes: ['name']
-          }
-      );
 
       const offset = (page - 1) * limit;
       const semuaBarang = await Barang.findAndCountAll({
@@ -133,7 +141,8 @@ exports.getSemuaBarang = async (req, res) => {
           attributes: ['id', 'nama', 'harga', 'urlGambar', 'stok'],
           include: includeClause,
           offset: offset,
-          limit: parseInt(limit)
+          limit: parseInt(limit),
+          order: [['createdAt', 'DESC']]
       });
 
       if (semuaBarang.rows.length === 0) {
@@ -296,8 +305,18 @@ exports.getBarangPenjual = async (req, res) => {
         }
 
         if (nama !== undefined) barang.nama = nama;
-        if (harga !== undefined) barang.harga = harga;
-        if (stok !== undefined) barang.stok = stok;
+        if (harga !== undefined) {
+            if (harga <= 0) {
+                return res.status(400).json(utils.apiError("Harga harus lebih dari 0"));
+            }
+            barang.harga = harga;
+        }
+        if (stok !== undefined) {
+            if (stok < 0) {
+                return res.status(400).json(utils.apiError("Stok tidak boleh kurang dari 0"));
+            }
+            barang.stok = stok;
+        }
         if (kategoriId !== undefined) barang.kategoriId = kategoriId;
         if (statusStokId !== undefined) barang.statusStokId = statusStokId;
 

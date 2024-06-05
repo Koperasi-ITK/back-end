@@ -1,5 +1,3 @@
-// file: /middleware/checkStatusAnggota.js
-
 const { User, statusAnggota } = require("../models");
 const utils = require("../../utils/utils");
 

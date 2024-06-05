@@ -133,6 +133,16 @@ const getUserByRole = async (req, res) => {
       where: {
         roleId: roleInfo.id,
       },
+      include: [
+        {
+          model: statusAnggota,
+          where: {
+            statusName: {
+              [Op.ne]: "Dihapus"
+            }
+          }
+        }
+      ]
     });
 
     let pages = (page - 1) * limit;
@@ -144,6 +154,11 @@ const getUserByRole = async (req, res) => {
         {
           model: statusAnggota,
           attributes: ["statusName"],
+          where: {
+            statusName: {
+              [Op.ne]: "Dihapus"
+            }
+          }
         },
         {
           model: Role,
@@ -188,13 +203,18 @@ const deleteUser = async (req, res) => {
       },
     });
 
-    await User.destroy({
+    await User.update({ AktifSampai: null }, { where: { id: user.id } });
+
+    const statusDihapus = await statusAnggota.findOne({
       where: {
-        id: id,
+        statusName: "Dihapus",
       },
     });
 
-    return res.status(201).json(utils.apiSuccess(`Berhasil Menghapus ${role.roleName}`));
+    if (!statusDihapus) return res.status(404).json(utils.apiError("Status 'Dihapus' tidak ditemukan"));
+    await User.update({ statusAnggotaId: statusDihapus.id }, { where: { id: user.id } });
+
+    return res.status(201).json(utils.apiSuccess(`Berhasil mengubah status ${role.roleName} menjadi Dihapus`));
   } catch (error) {
     console.log(error);
     return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
@@ -231,7 +251,6 @@ const updateAktor = async (req, res) => {
 
     const updatedUserFields = {};
     if (roleId !== undefined) updatedUserFields.roleId = roleId;
-    if (statusAnggotaId !== undefined) updatedUserFields.statusAnggotaId = statusAnggotaId;
     if (name !== undefined) updatedUserFields.name = name;
     if (email !== undefined) updatedUserFields.email = email;
     if (password !== undefined) {
@@ -239,24 +258,24 @@ const updateAktor = async (req, res) => {
       updatedUserFields.password = hashPassword;
     }
     if (noTelp !== undefined) updatedUserFields.noTelp = noTelp;
-    if (AktifSampai !== undefined) updatedUserFields.AktifSampai = AktifSampai;
+    if (AktifSampai !== undefined && statusAnggotaId === undefined) updatedUserFields.AktifSampai = AktifSampai;
 
-    await User.update(updatedUserFields, {
-      where: {
-        id: user.id,
-      },
-    });
+    if (statusAnggotaId !== undefined) {
+      await User.update({ AktifSampai: null }, { where: { id: user.id } });
+    }
+
+    await User.update(updatedUserFields, { where: { id: user.id } });
+
+    if (statusAnggotaId !== undefined) {
+      await User.update({ statusAnggotaId: statusAnggotaId }, { where: { id: user.id } });
+    }
 
     const updatedSaldoFields = {};
     if (saldoIuranWajib !== undefined) updatedSaldoFields.saldoIuranWajib = saldoIuranWajib;
     if (saldoIuranSukarela !== undefined) updatedSaldoFields.saldoIuranSukarela = saldoIuranSukarela;
     if (saldoPenjualan !== undefined) updatedSaldoFields.saldoPenjualan = saldoPenjualan;
 
-    await Saldo.update(updatedSaldoFields, {
-      where: {
-        userId: saldo.userId,
-      },
-    });
+    await Saldo.update(updatedSaldoFields, { where: { userId: saldo.userId } });
 
     const role = await Role.findByPk(user.roleId);
 
