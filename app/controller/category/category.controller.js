@@ -88,84 +88,61 @@ const updateCategory = async (req, res) => {
     const { id } = req.params;
     const { namaKategori, potonganHarga } = req.body;
     const image = req.file;
+    const checkCategory = await Kategori.findOne({ where: { id: id } });
 
-    console.log(namaKategori, potonganHarga, image);
-
-    const checkCategory = await Kategori.findOne({
-      where: {
-        id: id,
-      },
-    });
-
-    // console.log(checkCategory.image);
-
-    if (!checkCategory)
+    if (!checkCategory) {
       return res.status(404).json(utils.apiError("Kategori tidak ditemukan"));
+    }
 
     const allowedMimes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-
     const allowedSizeMb = 2;
 
-    let imageUrl = null;
-    let imageFileName = null;
+    let imageUrl = checkCategory.image;
+    let imageFileName = checkCategory.image
+      ? checkCategory.image.substring(checkCategory.image.lastIndexOf("/") + 1)
+      : null;
 
-    if (typeof image === "undefined") {
-      imageUrl = checkCategory.image;
-      imageFileName = checkCategory.image.substring(
-        checkCategory.image.lastIndexOf("/") + 1
-      );
-    } else {
-      if (!allowedMimes.includes(image.mimetype))
+    if (image) {
+      if (!allowedMimes.includes(image.mimetype)) {
         return res.status(409).json(utils.apiError("Format gambar tidak diperbolehkan"));
-
-      if (image.size / (1024 * 1024) > allowedSizeMb)
-        return res
-          .status(409)
-          .json(utils.apiError("Gambar kelas tidak boleh lebih dari 2mb"));
-
-      if (checkCategory.image != null) {
-        const deleteFile = await ImageKitFile.delete(checkCategory.imageFileName);
-        if (!deleteFile)
-          return res.status(500).json(utils.apiError("Kesalahan pada internal server"));
       }
 
+      if (image.size / (1024 * 1024) > allowedSizeMb) {
+        return res.status(409).json(utils.apiError("Gambar tidak boleh lebih dari 2MB"));
+      }
+
+      if (checkCategory.image) {
+        const imageDeleteSuccess = await ImageKitFile.delete(imageFileName);
+
+        if (!imageDeleteSuccess) {
+          return res.status(500).json(utils.apiError("Gagal menghapus gambar"));
+        }
+      }
       const uploadFile = await ImageKitFile.upload(image);
 
-      if (!uploadFile)
-        return res.status(500).json(utils.apiError("Kesalahan pada internal server"));
+      if (!uploadFile) {
+        return res.status(409).json(utils.apiError("Gagal mengupload gambar"));
+      }
 
       imageUrl = uploadFile.url;
       imageFileName = uploadFile.name;
     }
 
-    const checkName = await Kategori.findOne({
-      where: {
-        namaKategori,
-      },
-    });
-
-    if (checkName)
-      return res.status(409).json(utils.apiError("Nama Kategori Sudah Terdaftar"));
-
-    await Kategori.update(
-      {
-        data: {
-          namaKategori: namaKategori,
-          image: imageUrl,
-          potonganHarga: potonganHarga,
-        },
-      },
-      {
-        where: {
-          id: id,
-        },
+    if (namaKategori && namaKategori !== checkCategory.namaKategori) {
+      const checkName = await Kategori.findOne({ where: { namaKategori } });
+      if (checkName) {
+        return res.status(409).json(utils.apiError("Nama Kategori Sudah Terdaftar"));
       }
-    );
-
+    }
+    const updateData = {
+      namaKategori: namaKategori || checkCategory.namaKategori,
+      image: imageUrl,
+      potonganHarga: potonganHarga !== undefined ? potonganHarga : checkCategory.potonganHarga,
+    };
+    await Kategori.update(updateData, { where: { id: id } });
     return res.status(200).json(utils.apiSuccess("Berhasil Mengubah Kategori"));
   } catch (error) {
-    console.log(error);
-    return res.status(500).json(utils.apiError("Kesalahan pada internal server"));
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
   }
 };
 
