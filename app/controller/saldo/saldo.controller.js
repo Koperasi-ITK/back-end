@@ -1,58 +1,93 @@
 const { where } = require("sequelize");
 const utils = require("../../../utils/utils"),
-  { Saldo, User, RiwayatTopup,Pendapatan, Biaya } = require("../../models");
+  { Saldo, User, RiwayatTopup,Pendapatan, Biaya,Transaksi,metodePengiriman,statusPengiriman,detailTransaksi, Barang } = require("../../models");
 
-const addSaldo = async (req, res) => {
-  try {
-    const { email } = req.params;
-    const { saldoIuranWajib, saldoIuranSukarela } = req.body;
-
-    const user = await User.findOne({
-      where: {
-        email: email,
-      },
-    });
-
-    if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
-
-    const saldo = await Saldo.findOne({
-      where: {
-        userId: user.id,
-      },
-    });
-
-    await Saldo.update(
-      {
-        saldoIuranWajib: (saldo.saldoIuranWajib += saldoIuranWajib),
-        saldoIuranSukarela: (saldo.saldoIuranSukarela += saldoIuranSukarela),
-      },
-      {
+  const addSaldo = async (req, res) => {
+    try {
+      const { email } = req.params;
+      const { saldoIuranWajib, saldoIuranSukarela } = req.body;
+  
+      const user = await User.findOne({
         where: {
-          userId: saldo.id,
+          email: email,
         },
+      });
+  
+      if (!user) return res.status(404).json(utils.apiError("User tidak ditemukan"));
+  
+      const saldo = await Saldo.findOne({
+        where: {
+          userId: user.id,
+        },
+      });
+  
+      const biaya = await Biaya.findOne({
+        where: {
+          id: 1,
+        },
+      });
+  
+      if (!biaya) return res.status(404).json(utils.apiError("Biaya tidak ditemukan"));
+  
+      const { BiayaIuranBulanan } = biaya;
+  
+      // Calculate the number of months to add for saldoIuranWajib
+      let monthsToAdd = 0;
+      if (saldoIuranWajib) {
+        monthsToAdd = Math.floor(saldoIuranWajib / BiayaIuranBulanan);
       }
-    );
-
-    await RiwayatTopup.create({
-      userId: user.id,
-      saldoIuranWajib: saldoIuranWajib,
-      saldoIuranSukarela: saldoIuranSukarela,
-    });
-
-    const data = {
-      email: user.email,
-      saldoIuranWajib: saldoIuranWajib,
-      saldoIuranSukarela: saldoIuranSukarela,
-    };
-
-    return res
-      .status(400)
-      .json(utils.apiSuccess(`Berhasil menambah saldo ${user.name}`, data));
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
-  }
-};
+  
+      // Update the user's AktifSampai date
+      if (monthsToAdd > 0) {
+        const currentDate = new Date(user.AktifSampai || new Date());
+        currentDate.setMonth(currentDate.getMonth() + monthsToAdd);
+        await User.update(
+          {
+            AktifSampai: currentDate,
+          },
+          {
+            where: {
+              id: user.id,
+            },
+          }
+        );
+      }
+  
+      // Update the Saldo with the provided values
+      const updatedSaldo = {};
+      if (saldoIuranWajib) {
+        updatedSaldo.saldoIuranWajib = saldo.saldoIuranWajib + saldoIuranWajib;
+      }
+      if (saldoIuranSukarela) {
+        updatedSaldo.saldoIuranSukarela = saldo.saldoIuranSukarela + saldoIuranSukarela;
+      }
+  
+      await Saldo.update(updatedSaldo, {
+        where: {
+          userId: saldo.userId,
+        },
+      });
+  
+      await RiwayatTopup.create({
+        userId: user.id,
+        saldoIuranWajib: saldoIuranWajib || 0,
+        saldoIuranSukarela: saldoIuranSukarela || 0,
+      });
+  
+      const data = {
+        email: user.email,
+        saldoIuranWajib: saldoIuranWajib || 0,
+        saldoIuranSukarela: saldoIuranSukarela || 0,
+        AktifSampai: user.AktifSampai,
+      };
+  
+      return res.status(200).json(utils.apiSuccess(`Berhasil menambah saldo ${user.name}`, data));
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+    }
+  };
+  
 
 const RiwayatTopUp = async (req, res) => {
   try {
@@ -133,14 +168,79 @@ const transferSaldoPenjualanToSukarela = async (req, res) => {
 
 const getPendapatan = async (req, res) => {
   try {
+    const { status } = req.query;
+
+    let statusCondition = {};
+    if (status === 'canceled') {
+      statusCondition = { statusPengirimanId: [12] };
+    } else if (status === 'ongoing') {
+      statusCondition = { statusPengirimanId: [3, 4, 5, 6, 7] };
+    } else if (status === 'successful') {
+      statusCondition = { statusPengirimanId: 8 };
+    }
+
+    const allTransaksi = await Transaksi.findAll({
+      where: statusCondition,
+      include: [
+        {
+          model: User,
+          attributes: ["name", "email"],
+        },
+        {
+          model: metodePengiriman,
+          attributes: ["metodePengirimanName"],
+        },
+        {
+          model: statusPengiriman,
+          attributes: ["statusPengirimanName"],
+        },
+        {
+          model: detailTransaksi,
+          attributes: ["jumlah", "hargaItem", "totalHarga"],
+          include: [
+            {
+              model: Barang,
+              attributes: ["nama", "harga"],
+            },
+          ],
+        },
+      ],
+    });
+
     const pendapatan = await Pendapatan.findAll();
 
     const totalCategoryRevenue = pendapatan.reduce((total, item) => total + item.categoryRevenue, 0);
     const totalShippingRevenue = pendapatan.reduce((total, item) => total + item.shippingRevenue, 0);
 
+    const itemDetails = {};
+    let totalSalesRevenue = 0;
+
+    allTransaksi.forEach(transaksi => {
+      transaksi.detailTransaksis.forEach(detail => {
+        if (detail.Barang) {
+          if (!itemDetails[detail.Barang.nama]) {
+            itemDetails[detail.Barang.nama] = {
+              barangId: detail.barangId,
+              nama: detail.Barang.nama,
+              jumlah: 0,
+              totalHarga: 0,
+            };
+          }
+          itemDetails[detail.Barang.nama].jumlah += detail.jumlah;
+          itemDetails[detail.Barang.nama].totalHarga += detail.totalHarga;
+          totalSalesRevenue += detail.totalHarga;
+        }
+      });
+    });
+
+    const aggregatedItemsSold = Object.values(itemDetails);
+
     const result = {
+      totalTransaksi: allTransaksi.length,
       totalCategoryRevenue,
-      totalShippingRevenue
+      totalShippingRevenue,
+      totalSalesRevenue,
+      itemsSold: aggregatedItemsSold,
     };
 
     return res.status(200).json(utils.apiSuccess("Berhasil mengambil pendapatan", result));

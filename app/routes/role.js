@@ -4,6 +4,7 @@ const { verifyToken } = require("../middleware/authMiddleware");
 const verifyRole = require("../middleware/checkRole");
 
 router.get("/", verifyToken, verifyRole(4), roleController.getAll);
+router.get("/statusanggota", verifyToken, roleController.getStatusAnggota);
 router.post("/", verifyToken, roleController.createRole);
 router.put("/:id", verifyToken, roleController.updateRole);
 router.delete("/:id", verifyToken, roleController.deleteRole);

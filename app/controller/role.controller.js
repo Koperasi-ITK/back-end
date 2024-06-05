@@ -1,5 +1,5 @@
 const utils = require("../../utils/utils");
-const { Role } = require("../models");
+const { Role,statusAnggota  } = require("../models");
 
 const createRole = async (req, res) => {
   try {
@@ -17,11 +17,11 @@ const createRole = async (req, res) => {
 
 const getAll = async (req, res) => {
   try {
-    const category = await Role.findAll();
+    const roles = await Role.findAll();
 
     return res
       .status(200)
-      .json(utils.apiSuccess("Berhasil menampilkan data Role", category));
+      .json(utils.apiSuccess("Berhasil menampilkan data Role", roles));
   } catch (error) {
     console.log(error);
     return res.status(500).json(utils.apiError("kesalahan pada internal server"));
@@ -78,9 +78,20 @@ const deleteRole = async (req, res) => {
   }
 };
 
+const getStatusAnggota = async (req, res) => {
+  try {
+    const statusAnggotas = await statusAnggota.findAll();
+    return res.status(200).json(utils.apiSuccess("Berhasil menampilkan status anggota", statusAnggotas));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("kesalahan pada internal server"));
+  }
+};
+
 module.exports = {
   createRole,
   getAll,
   updateRole,
   deleteRole,
+  getStatusAnggota
 };

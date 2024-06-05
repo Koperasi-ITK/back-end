@@ -5,28 +5,61 @@ const filter = require("../../utils/filter");
 const statusanggota = require("../models/statusanggota");
 const { Op } = require("sequelize");
 
-const getUser = async (req, res, next) => {
+const getUser = async (req, res) => {
   try {
-    const { search } = req.query;
+    const { id, name } = req.query;
     let whereClause = {};
 
-    if (search) {
-      whereClause = {
-        name: {
-          [Op.like]: `%${search}%`,
-        },
+    if (id) {
+      whereClause.id = id;
+    }
+
+    if (name) {
+      whereClause.name = {
+        [Op.like]: `%${name}%`,
       };
     }
 
-    const datas = await User.findAll({
+    const users = await User.findAll({
       where: whereClause,
+      include: [
+        {
+          model: statusAnggota,
+          attributes: ["statusName"]
+        },
+        {
+          model: Role,
+          attributes: ["roleName"]
+        },
+        {
+          model: Saldo,
+          attributes: ["saldoIuranWajib", "saldoIuranSukarela", "saldoPenjualan"]
+        }
+      ]
     });
 
-    const data = {
-      datas,
-    };
+    const userDetails = users.map(user => {
+      const statusAnggotaName = user.statusAnggotum ? user.statusAnggotum.statusName : "Status tidak ditemukan";
+      const roleName = user.Role ? user.Role.roleName : "Role tidak ditemukan";
+      const { saldoIuranWajib, saldoIuranSukarela, saldoPenjualan } = user.Saldo || {};
 
-    return res.status(200).json(utils.apiSuccess("Berhasil mengambil data user", data));
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        user_status: user.user_status,
+        noTelp: user.noTelp,
+        urlProfile: user.urlProfile,
+        statusAnggota: statusAnggotaName,
+        role: roleName,
+        aktifSampai: user.AktifSampai,
+        saldoIuranWajib,
+        saldoIuranSukarela,
+        saldoPenjualan
+      };
+    });
+
+    return res.status(200).json(utils.apiSuccess("Berhasil mengambil data user", { users: userDetails }));
   } catch (error) {
     console.error("Error in getUser:", error);
     return res.status(500).json(utils.apiError("Kesalahan pada internal server"));
@@ -42,6 +75,14 @@ const getProfile = async (req, res) => {
         {
           model: statusAnggota,
           attributes: ["statusName"]
+        },
+        {
+          model: Role,
+          attributes: ["roleName"]
+        },
+        {
+          model: Saldo,
+          attributes: ["saldoIuranWajib", "saldoIuranSukarela", "saldoPenjualan"]
         }
       ]
     });
@@ -49,6 +90,8 @@ const getProfile = async (req, res) => {
     if (!user) return res.status(400).json(utils.apiError("User tidak ditemukan"));
 
     const statusAnggotaName = user.statusAnggotum ? user.statusAnggotum.statusName : "Status tidak ditemukan";
+    const roleName = user.Role ? user.Role.roleName : "Role tidak ditemukan";
+    const { saldoIuranWajib, saldoIuranSukarela, saldoPenjualan } = user.Saldo || {};
 
     const data = {
       name: user.name,
@@ -56,7 +99,12 @@ const getProfile = async (req, res) => {
       user_status: user.user_status,
       noTelp: user.noTelp,
       urlProfile: user.urlProfile,
-      statusAnggota: statusAnggotaName
+      statusAnggota: statusAnggotaName,
+      role: roleName,
+      aktifSampai: user.AktifSampai,
+      saldoIuranWajib,
+      saldoIuranSukarela,
+      saldoPenjualan
     };
 
     return res.status(200).json(utils.apiSuccess("Data user berhasil diambil", data));
@@ -160,7 +208,10 @@ const updateAktor = async (req, res) => {
       roleId,
       statusAnggotaId,
       name,
+      email,
+      password,
       noTelp,
+      AktifSampai,
       saldoIuranWajib,
       saldoIuranSukarela,
       saldoPenjualan,
@@ -176,36 +227,38 @@ const updateAktor = async (req, res) => {
       },
     });
 
-    const role = await Role.findByPk(user.roleId);
-
     if (!saldo) return res.status(404).json(utils.apiError("Saldo User tidak ditemukan"));
 
-    await User.update(
-      {
-        roleId: roleId,
-        statusAnggotaId: statusAnggotaId,
-        name: name,
-        noTelp: noTelp,
-      },
-      {
-        where: {
-          id: user.id,
-        },
-      }
-    );
+    const updatedUserFields = {};
+    if (roleId !== undefined) updatedUserFields.roleId = roleId;
+    if (statusAnggotaId !== undefined) updatedUserFields.statusAnggotaId = statusAnggotaId;
+    if (name !== undefined) updatedUserFields.name = name;
+    if (email !== undefined) updatedUserFields.email = email;
+    if (password !== undefined) {
+      const hashPassword = await utils.createHashData(password);
+      updatedUserFields.password = hashPassword;
+    }
+    if (noTelp !== undefined) updatedUserFields.noTelp = noTelp;
+    if (AktifSampai !== undefined) updatedUserFields.AktifSampai = AktifSampai;
 
-    await Saldo.update(
-      {
-        saldoIuranWajib: saldoIuranWajib,
-        saldoIuranSukarela: saldoIuranSukarela,
-        saldoPenjualan: saldoPenjualan,
+    await User.update(updatedUserFields, {
+      where: {
+        id: user.id,
       },
-      {
-        where: {
-          userId: saldo.userId,
-        },
-      }
-    );
+    });
+
+    const updatedSaldoFields = {};
+    if (saldoIuranWajib !== undefined) updatedSaldoFields.saldoIuranWajib = saldoIuranWajib;
+    if (saldoIuranSukarela !== undefined) updatedSaldoFields.saldoIuranSukarela = saldoIuranSukarela;
+    if (saldoPenjualan !== undefined) updatedSaldoFields.saldoPenjualan = saldoPenjualan;
+
+    await Saldo.update(updatedSaldoFields, {
+      where: {
+        userId: saldo.userId,
+      },
+    });
+
+    const role = await Role.findByPk(user.roleId);
 
     return res.status(200).json(utils.apiSuccess(`${role.roleName} berhasil diupdate`));
   } catch (error) {

@@ -72,8 +72,9 @@ exports.getBarangDiKeranjang = async (req, res) => {
     }
 
     let itemsToRemove = [];
+    items = items.filter(item => item.Barang !== null);
     for (const item of items) {
-      if (item.Barang.stok === 0 || item.Barang.statusStokId === 2) {
+      if (!item.Barang || item.Barang.stok === 0 || item.Barang.statusStokId === 2) {
         itemsToRemove.push(item.id);
       }
     }
@@ -95,9 +96,9 @@ exports.getBarangDiKeranjang = async (req, res) => {
       return {
         id: item.id,
         namaBarang: item.Barang.nama,
-        harga: hargaFinal, // Adjusted price with potonganHarga
+        harga: hargaFinal,
         jumlah: item.jumlah,
-        subTotal: hargaFinal * item.jumlah, // Adjusted subtotal with potonganHarga
+        subTotal: hargaFinal * item.jumlah,
         urlGambar: item.Barang.urlGambar
       };
     });
