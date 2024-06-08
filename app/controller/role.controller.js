@@ -1,5 +1,5 @@
 const utils = require("../../utils/utils");
-const { Role,statusAnggota  } = require("../models");
+const { Role,statusAnggota,statusPengiriman   } = require("../models");
 
 const createRole = async (req, res) => {
   try {
@@ -88,10 +88,21 @@ const getStatusAnggota = async (req, res) => {
   }
 };
 
+const getStatusPengiriman = async (req, res) => {
+  try {
+    const statusPengirimans = await statusPengiriman.findAll();
+    return res.status(200).json(utils.apiSuccess("Berhasil menampilkan status pengiriman", statusPengirimans));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("kesalahan pada internal server"));
+  }
+};
+
 module.exports = {
   createRole,
   getAll,
   updateRole,
   deleteRole,
-  getStatusAnggota
+  getStatusAnggota,
+  getStatusPengiriman
 };

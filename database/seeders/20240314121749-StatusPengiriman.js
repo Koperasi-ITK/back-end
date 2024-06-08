@@ -44,7 +44,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        statusPengirimanName: 'Dikomplain',
+        statusPengirimanName: 'Menunggu Diambil',
         createdAt: new Date(),
         updatedAt: new Date()
       },

@@ -12,6 +12,7 @@ router.get(
   transaksicontroller.getTransaksi
 );
 router.post('/cancel-checkout-by-employee', verifyToken,verifyRole(3), transaksicontroller.cancelCheckoutByEmployee);
+router.post('/updateStatusPengiriman',verifyToken,verifyRole(3), transaksicontroller.updateStatusPengiriman);
 router.get("/getSalesHistory", verifyToken, verifyRole(1,2), transaksicontroller.getSalesHistory);
 router.get("/getAllTransaksi", verifyToken, verifyRole(4,3), transaksicontroller.getAllTransaksi);
 

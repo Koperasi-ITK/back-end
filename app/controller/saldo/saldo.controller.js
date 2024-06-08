@@ -1,6 +1,6 @@
 const { where } = require("sequelize");
 const utils = require("../../../utils/utils"),
-  { Saldo, User, RiwayatTopup,Pendapatan, Biaya,Transaksi,metodePengiriman,statusPengiriman,detailTransaksi, Barang } = require("../../models");
+  { Saldo, User, RiwayatTopup,Pendapatan, Biaya,Transaksi,metodePengiriman,statusPengiriman,detailTransaksi, Barang,RiwayatPencairan  } = require("../../models");
 
   const addSaldo = async (req, res) => {
     try {
@@ -280,6 +280,103 @@ const getBiaya = async (req, res) => {
   }
 };
 
+const PencairanDana = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { saldoIuranPenjualan, jumlahIuranSukarela } = req.body;
+
+    if (!saldoIuranPenjualan && !jumlahIuranSukarela) {
+      return res.status(400).json(utils.apiError("Saldo Iuran Penjualan atau Iuran Sukarela harus diisi."));
+    }
+
+    // Cari user berdasarkan email
+    const user = await User.findOne({
+      where: {
+        email: email,
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json(utils.apiError("User tidak ditemukan."));
+    }
+
+    const saldo = await Saldo.findOne({ where: { userId: user.id } });
+    if (!saldo) {
+      return res.status(404).json(utils.apiError("Saldo tidak ditemukan."));
+    }
+
+    if (saldoIuranPenjualan && saldoIuranPenjualan > saldo.saldoPenjualan) {
+      return res.status(409).json(utils.apiError("Saldo Iuran Penjualan tidak mencukupi."));
+    }
+
+    if (jumlahIuranSukarela && jumlahIuranSukarela > saldo.saldoIuranSukarela) {
+      return res.status(409).json(utils.apiError("Saldo Iuran Sukarela tidak mencukupi."));
+    }
+
+    // Update saldo
+    if (saldoIuranPenjualan) {
+      saldo.saldoPenjualan -= saldoIuranPenjualan;
+      if (saldo.saldoPenjualan < 0) saldo.saldoPenjualan = 0;
+    }
+
+    if (jumlahIuranSukarela) {
+      saldo.saldoIuranSukarela -= jumlahIuranSukarela;
+      if (saldo.saldoIuranSukarela < 0) saldo.saldoIuranSukarela = 0;
+    }
+
+    await saldo.save();
+
+    await RiwayatPencairan.create({
+      userId: user.id,
+      jumlahPencairan: (saldoIuranPenjualan || 0) + (jumlahIuranSukarela || 0),
+      tanggalPencairan: new Date(),
+    });
+
+    const data = {
+      userId: user.id,
+      saldoIuranPenjualan: saldoIuranPenjualan || 0,
+      jumlahIuranSukarela: jumlahIuranSukarela || 0,
+      saldoPenjualan: saldo.saldoPenjualan,
+      saldoIuranSukarela: saldo.saldoIuranSukarela,
+    };
+
+    return res.status(200).json(utils.apiSuccess("Saldo berhasil dikurangi", data));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server."));
+  }
+};
+
+const getRiwayatPencairan = async (req, res) => {
+  try {
+    const riwayatPencairan = await RiwayatPencairan.findAll({
+      include: [
+        {
+          model: User,
+          attributes: ["name", "email"],
+        },
+      ],
+    });
+
+    const result = riwayatPencairan.map((item) => {
+      return {
+        id: item.id,
+        userId: item.userId,
+        name: item.User.name,
+        email: item.User.email,
+        jumlahPencairan: item.jumlahPencairan,
+        tanggalPencairan: item.tanggalPencairan,
+        createdAt: item.createdAt,
+      };
+    });
+
+    return res.status(200).json(utils.apiSuccess("Berhasil mengambil riwayat pencairan", result));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server."));
+  }
+};
+
 module.exports = {
   addSaldo,
   RiwayatTopUp,
@@ -287,5 +384,7 @@ module.exports = {
   transferSaldoPenjualanToSukarela,
   getPendapatan,
   editBiaya,
-  getBiaya
+  getBiaya,
+  PencairanDana,
+  getRiwayatPencairan
 };

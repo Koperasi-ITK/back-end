@@ -371,7 +371,7 @@ exports.getAllTransaksi = async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
   const status = req.query.status || 'all';
-  const filter = req.query.filter ? req.query.filter.split(',').map(Number) : [];
+  const statuses = req.query.statuses ? req.query.statuses.split(',').map(Number) : [];
 
   try {
     const offset = (page - 1) * limit;
@@ -380,9 +380,10 @@ exports.getAllTransaksi = async (req, res) => {
     if (status === 'canceled') {
       statusCondition = { statusPengirimanId: [11, 12] };
     } else if (status === 'ongoing') {
-      statusCondition = { statusPengirimanId: [3, 4, 5, 6, 7] };
-      if (filter.length) {
-        statusCondition = { statusPengirimanId: filter };
+      if (statuses.length) {
+        statusCondition = { statusPengirimanId: statuses };
+      } else {
+        statusCondition = { statusPengirimanId: [3, 4, 5, 6, 7 ,9] };
       }
     } else if (status === 'successful') {
       statusCondition = { statusPengirimanId: 8 };
@@ -536,5 +537,53 @@ exports.cancelCheckoutByEmployee = async (req, res) => {
   } catch (error) {
       console.error(error);
       return res.status(500).json(utils.apiError("Kesalahan pada internal server.", { error: error.message }));
+  }
+};
+
+exports.updateStatusPengiriman = async (req, res) => {
+  const { transaksiId, newStatus, newAlamatPengiriman } = req.body;
+
+  try {
+    if (!transaksiId || (!newStatus && !newAlamatPengiriman)) {
+      return res.status(400).json(utils.apiError("Transaksi ID dan status baru atau alamat pengiriman baru harus disertakan."));
+    }
+
+    const transaksi = await Transaksi.findOne({ where: { id: transaksiId } });
+
+    if (!transaksi) {
+      return res.status(404).json(utils.apiError("Transaksi tidak ditemukan."));
+    }
+
+    const metode = await metodePengiriman.findOne({ where: { id: transaksi.metodePengirimanId } });
+
+    if (!metode) {
+      return res.status(404).json(utils.apiError("Metode pengiriman tidak ditemukan."));
+    }
+
+    if (metode.metodePengirimanName === 'Ambil Sendiri') {
+      if (!newAlamatPengiriman) {
+        return res.status(400).json(utils.apiError("Alamat pengiriman baru harus disertakan untuk metode 'Ambil Sendiri'."));
+      }
+      transaksi.alamatPengiriman = newAlamatPengiriman;
+      transaksi.statusPengirimanId = 9; //auto update status ke 9
+    } else {
+      if (!newStatus) {
+        return res.status(400).json(utils.apiError("Status baru harus disertakan untuk metode selain 'Ambil Sendiri'."));
+      }
+      const status = await statusPengiriman.findOne({ where: { statusPengirimanName: newStatus } });
+
+      if (!status) {
+        return res.status(404).json(utils.apiError("Status pengiriman tidak ditemukan."));
+      }
+
+      transaksi.statusPengirimanId = status.id;
+    }
+
+    await transaksi.save();
+
+    return res.status(200).json(utils.apiSuccess("Status pengiriman berhasil diperbarui.", transaksi));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(utils.apiError("Kesalahan pada internal server.", { error: error.message }));
   }
 };

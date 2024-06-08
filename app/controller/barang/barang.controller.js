@@ -1,7 +1,7 @@
 const utils = require("../../../utils/utils");
 const ImageKitFile = require("../../../utils/ImageKit");
 const { Barang, Kategori, statusStok, User,statusAnggota } = require("../../models");
-const { Op } = require('sequelize');
+const { Op, or } = require('sequelize');
 
 exports.tambahBarang = async (req, res) => {
   try {
@@ -86,88 +86,106 @@ exports.hapusBarang = async (req, res) => {
 
 exports.getSemuaBarang = async (req, res) => {
   try {
-      const { id, nama, kategori, page = 1, limit = 10 } = req.query;
-      const whereClause = {};
-      const includeClause = [
+    const { id, nama, kategori, page = 1, limit = 10, statusStokFilter } = req.query;
+    const whereClause = {};
+    const includeClause = [
+      {
+        model: Kategori,
+        attributes: ['namaKategori', 'potonganHarga']
+      },
+      {
+        model: User,
+        attributes: ['name'],
+        include: [
           {
-              model: Kategori,
-              attributes: ['namaKategori', 'potonganHarga']
-          },
-          {
-              model: User,
-              attributes: ['name'],
-              include: [
-                  {
-                      model: statusAnggota,
-                      attributes: ['statusName'],
-                      where: {
-                          statusName: 'Aktif'
-                      }
-                  }
-              ],
-              required: true
-          },
-          {
-              model: statusStok,
-              attributes: ['statusStok']
+            model: statusAnggota,
+            attributes: ['statusName'],
+            where: {
+              statusName: 'Aktif'
+            }
           }
-      ];
-
-      if (id) {
-          whereClause.id = id;
+        ],
+        required: true
+      },
+      {
+        model: statusStok,
+        attributes: ['statusStok']
       }
+    ];
 
-      if (nama) {
-          whereClause.nama = {
-              [Op.like]: `%${nama.toLowerCase()}%`
-          };
-      }
+    if (id) {
+      whereClause.id = id;
+    }
 
-      if (kategori) {
-          includeClause.push({
-              model: Kategori,
-              attributes: ['namaKategori', 'potonganHarga'],
-              where: {
-                  namaKategori: {
-                      [Op.like]: `%${kategori.toLowerCase()}%`
-                  }
-              }
-          });
-      }
+    if (nama) {
+      whereClause.nama = {
+        [Op.like]: `%${nama.toLowerCase()}%`
+      };
+    }
 
-      const offset = (page - 1) * limit;
-      const semuaBarang = await Barang.findAndCountAll({
-          where: whereClause,
-          attributes: ['id', 'nama', 'harga', 'urlGambar', 'stok'],
-          include: includeClause,
-          offset: offset,
-          limit: parseInt(limit),
-          order: [['createdAt', 'DESC']]
+    if (kategori) {
+      includeClause.push({
+        model: Kategori,
+        attributes: ['namaKategori', 'potonganHarga'],
+        where: {
+          namaKategori: {
+            [Op.like]: `%${kategori.toLowerCase()}%`
+          }
+        }
       });
+    }
 
-      if (semuaBarang.rows.length === 0) {
-          return res.status(404).json(utils.apiError("Barang tidak ditemukan atau kosong"));
+    if (statusStokFilter) {
+      if (statusStokFilter === "Tersedia") {
+        whereClause.stok = {
+          [Op.gt]: 0
+        };
+      } else {
+        includeClause.push({
+          model: statusStok,
+          attributes: ['statusStok'],
+          where: {
+            statusStok: {
+              [Op.like]: `%${statusStokFilter}%`
+            }
+          }
+        });
       }
+    }
 
-      const items = semuaBarang.rows.map(item => {
-          const hargaAsli = item.harga;
-          const potonganHarga = item.Kategori.potonganHarga || 0;
-          const hargaFinal = hargaAsli + potonganHarga;
-          return {
-              ...item.get(),
-              harga: hargaFinal
-          };
-      });
+    const offset = (page - 1) * limit;
+    const semuaBarang = await Barang.findAndCountAll({
+      where: whereClause,
+      attributes: ['id', 'nama', 'harga', 'urlGambar', 'stok'],
+      include: includeClause,
+      offset: offset,
+      limit: parseInt(limit),
+      order: [['createdAt', 'DESC']]
+    });
 
-      res.status(200).json(utils.apiSuccess("Semua barang berhasil diambil", {
-          totalItems: semuaBarang.count,
-          totalPages: Math.ceil(semuaBarang.count / limit),
-          currentPage: page,
-          items: items
-      }));
+    if (semuaBarang.rows.length === 0) {
+      return res.status(404).json(utils.apiError("Barang tidak ditemukan atau kosong"));
+    }
+
+    const items = semuaBarang.rows.map(item => {
+      const hargaAsli = item.harga;
+      const potonganHarga = item.Kategori.potonganHarga || 0;
+      const hargaFinal = hargaAsli + potonganHarga;
+      return {
+        ...item.get(),
+        harga: hargaFinal
+      };
+    });
+
+    res.status(200).json(utils.apiSuccess("Semua barang berhasil diambil", {
+      totalItems: semuaBarang.count,
+      totalPages: Math.ceil(semuaBarang.count / limit),
+      currentPage: page,
+      items: items
+    }));
   } catch (error) {
-      console.error(error);
-      res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
+    console.error(error);
+    res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
   }
 };
 
@@ -260,7 +278,7 @@ exports.getBarangPenjual = async (req, res) => {
         const image = req.file;
 
         let barang;
-        if (userRole === 4) {
+        if (userRole === 4 || userRole === 3) {
             barang = await Barang.findOne({
                 where: { id: barangId }
             });
