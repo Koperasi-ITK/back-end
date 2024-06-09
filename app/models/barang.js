@@ -1,12 +1,8 @@
 "use strict";
-const { Model, INTEGER } = require("sequelize");
+const { Model, UUID, UUIDV4 } = require("sequelize");
+
 module.exports = (sequelize, DataTypes) => {
   class Barang extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
       Barang.belongsTo(models.Kategori, {
         foreignKey: "kategoriId",
@@ -26,20 +22,48 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
+
   Barang.init(
     {
-      kategoriId: DataTypes.INTEGER,
-      userId: DataTypes.INTEGER,
-      statusStokId: DataTypes.INTEGER,
-      nama: DataTypes.STRING,
-      harga: DataTypes.INTEGER,
-      stok: DataTypes.INTEGER,
-      urlGambar: DataTypes.STRING,
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      kategoriId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      statusStokId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      nama: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      harga: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      stok: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      urlGambar: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
     },
     {
       sequelize,
       modelName: "Barang",
     }
   );
+
   return Barang;
 };

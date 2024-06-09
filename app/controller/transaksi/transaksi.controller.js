@@ -242,6 +242,7 @@ exports.getSalesHistory = async (req, res) => {
     const { count, rows } = await detailTransaksi.findAndCountAll({
       offset,
       limit,
+      order: [['Transaksi', 'createdAt', 'DESC']],
       include: [
         {
           model: Transaksi,

@@ -1,13 +1,14 @@
-"use strict";
+'use strict';
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("Barangs", {
+    await queryInterface.createTable('barangs', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        unique: true,
       },
       kategoriId: {
         type: Sequelize.INTEGER,
@@ -48,7 +49,7 @@ module.exports = {
     });
     await queryInterface.sequelize.query(`
       CREATE TRIGGER before_update_statusStokId
-      BEFORE UPDATE ON barangs
+      BEFORE UPDATE ON Barangs
       FOR EACH ROW
       BEGIN
           IF NEW.stok = 0 THEN
@@ -65,6 +66,6 @@ module.exports = {
       DROP TRIGGER IF EXISTS before_update_statusStokId;
     `);
 
-    await queryInterface.dropTable("Barangs");
+    await queryInterface.dropTable('barangs');
   }
 };

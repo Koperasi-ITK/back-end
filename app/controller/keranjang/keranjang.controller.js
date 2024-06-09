@@ -47,6 +47,9 @@ exports.tambahKeKeranjang = async (req, res) => {
 
 exports.getBarangDiKeranjang = async (req, res) => {
   const userId = res.locals.user.id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
 
   try {
     const keranjang = await Keranjang.findOne({ where: { userId } });
@@ -54,7 +57,7 @@ exports.getBarangDiKeranjang = async (req, res) => {
       return res.status(404).json(utils.apiError("Keranjang tidak ditemukan"));
     }
 
-    let items = await itemKeranjang.findAll({
+    let { rows: items, count: totalItems } = await itemKeranjang.findAndCountAll({
       where: { keranjangId: keranjang.id },
       include: [{
         model: Barang,
@@ -64,7 +67,9 @@ exports.getBarangDiKeranjang = async (req, res) => {
           model: Kategori,
           attributes: ['potonganHarga']
         }]
-      }]
+      }],
+      limit,
+      offset
     });
 
     if (items.length === 0) {
@@ -80,7 +85,7 @@ exports.getBarangDiKeranjang = async (req, res) => {
 
     if (itemsToRemove.length > 0) {
       await itemKeranjang.destroy({ where: { id: itemsToRemove } });
-      items = await itemKeranjang.findAll({
+      const newItemsResult = await itemKeranjang.findAndCountAll({
         where: { keranjangId: keranjang.id },
         include: [{
           model: Barang,
@@ -90,8 +95,12 @@ exports.getBarangDiKeranjang = async (req, res) => {
             model: Kategori,
             attributes: ['potonganHarga']
           }]
-        }]
+        }],
+        limit,
+        offset
       });
+      items = newItemsResult.rows;
+      totalItems = newItemsResult.count;
     }
 
     if (items.length === 0) {
@@ -117,9 +126,14 @@ exports.getBarangDiKeranjang = async (req, res) => {
       };
     });
 
+    const totalPages = Math.ceil(totalItems / limit);
+
     return res.status(200).json(utils.apiSuccess("Item di keranjang", {
       items: simplifiedItems,
-      totalHarga
+      totalHarga,
+      currentPage: page,
+      totalPages,
+      totalItems
     }));
   } catch (error) {
     console.log(error);

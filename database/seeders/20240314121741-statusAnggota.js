@@ -6,25 +6,28 @@ module.exports = {
     await queryInterface.bulkInsert("statusAnggota", [
       {
         statusName: "Aktif",
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         statusName: "Tidak Aktif",
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         statusName: "Bukan Member",
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         statusName: "Dihapus",
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
-    ]);
+    ], {});
   },
 
   async down(queryInterface, Sequelize) {
-    /**
-     * Add commands to revert seed here.
-     *
-     * Example:
-     * await queryInterface.bulkDelete('People', null, {});
-     */
+    await queryInterface.bulkDelete("statusAnggota", null, {});
   },
 };
