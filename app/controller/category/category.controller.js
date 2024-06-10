@@ -112,12 +112,17 @@ const updateCategory = async (req, res) => {
       }
 
       if (checkCategory.image) {
-        const imageDeleteSuccess = await ImageKitFile.delete(imageFileName);
+        try {
+          const imageDeleteSuccess = await ImageKitFile.delete(imageFileName);
 
-        if (!imageDeleteSuccess) {
-          return res.status(500).json(utils.apiError("Gagal menghapus gambar"));
+          if (!imageDeleteSuccess) {
+            console.error("Gagal menghapus gambar lama");
+          }
+        } catch (deleteError) {
+          console.error("Error saat menghapus gambar:", deleteError.message);
         }
       }
+
       const uploadFile = await ImageKitFile.upload(image);
 
       if (!uploadFile) {
@@ -134,12 +139,15 @@ const updateCategory = async (req, res) => {
         return res.status(409).json(utils.apiError("Nama Kategori Sudah Terdaftar"));
       }
     }
+    
     const updateData = {
       namaKategori: namaKategori || checkCategory.namaKategori,
       image: imageUrl,
       potonganHarga: potonganHarga !== undefined ? potonganHarga : checkCategory.potonganHarga,
     };
+    
     await Kategori.update(updateData, { where: { id: id } });
+    
     return res.status(200).json(utils.apiSuccess("Berhasil Mengubah Kategori"));
   } catch (error) {
     return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
