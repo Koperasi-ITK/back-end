@@ -38,9 +38,14 @@ const utils = require("../../../utils/utils"),
         monthsToAdd = Math.floor(saldoIuranWajib / BiayaIuranBulanan);
       }
   
-      // Update the user's AktifSampai date
+      // Update the user's AktifSampai date based on statusAnggotaId
       if (monthsToAdd > 0) {
-        const currentDate = new Date(user.AktifSampai || new Date());
+        let currentDate;
+        if (user.statusAnggotaId === 1) {
+          currentDate = new Date(user.AktifSampai || new Date());
+        } else {
+          currentDate = new Date();
+        }
         currentDate.setMonth(currentDate.getMonth() + monthsToAdd);
         await User.update(
           {

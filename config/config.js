@@ -17,6 +17,12 @@ const sequelize = new Sequelize(`${DB_NAME}_development`, DB_USERNAME, DB_PASSWO
   host: DB_HOST,
   dialect: "mysql",
   logging: false,
+  timezone: "+08:00",
+  dialectOptions: {
+    useUTC: false,
+    dateStrings: true,
+    typeCast: true,
+  },
 });
 
 module.exports = {
@@ -27,6 +33,12 @@ module.exports = {
     database: `${DB_NAME}`,
     host: DB_HOST,
     dialect: "mysql",
+    timezone: "+08:00",
+    dialectOptions: {
+      useUTC: false,
+      dateStrings: true,
+      typeCast: true,
+    },
   },
   test: {
     username: DB_USERNAME,
@@ -34,6 +46,12 @@ module.exports = {
     database: `${DB_NAME}_test`,
     host: DB_HOST,
     dialect: "mysql",
+    timezone: "+08:00",
+    dialectOptions: {
+      useUTC: false,
+      dateStrings: true,
+      typeCast: true,
+    },
   },
   production: {
     username: DB_USERNAME,
@@ -41,5 +59,11 @@ module.exports = {
     database: `${DB_NAME}`,
     host: DB_HOST,
     dialect: "mysql",
+    timezone: "+08:00",
+    dialectOptions: {
+      useUTC: false,
+      dateStrings: true,
+      typeCast: true,
+    },
   },
 };
