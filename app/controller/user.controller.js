@@ -8,7 +8,7 @@ const { logAction,getCurrentTime } = require('../../utils/Logging');
 
 const getUser = async (req, res) => {
   try {
-    const { id, email } = req.query;
+    const { id, email, page = 1, limit = 10 } = req.query;
     let whereClause = {};
 
     if (id) {
@@ -21,7 +21,9 @@ const getUser = async (req, res) => {
       };
     }
 
-    const users = await User.findAll({
+    const offset = (page - 1) * limit;
+
+    const { count, rows: users } = await User.findAndCountAll({
       where: whereClause,
       include: [
         {
@@ -36,7 +38,10 @@ const getUser = async (req, res) => {
           model: Saldo,
           attributes: ["saldoIuranWajib", "saldoIuranSukarela", "saldoPenjualan"]
         }
-      ]
+      ],
+      limit: parseInt(limit),
+      offset: offset,
+      order: [['createdAt', 'DESC']] // Order by createdAt descending
     });
 
     const userDetails = users.map(user => {
@@ -60,7 +65,12 @@ const getUser = async (req, res) => {
       };
     });
 
-    return res.status(200).json(utils.apiSuccess("Berhasil mengambil data user", { users: userDetails }));
+    return res.status(200).json(utils.apiSuccess("Berhasil mengambil data user", {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      users: userDetails
+    }));
   } catch (error) {
     console.error("Error in getUser:", error);
     return res.status(500).json(utils.apiError("Kesalahan pada internal server"));

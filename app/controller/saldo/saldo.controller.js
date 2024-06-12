@@ -94,38 +94,47 @@ const utils = require("../../../utils/utils"),
     }
   };
   
-
-const RiwayatTopUp = async (req, res) => {
-  try {
-    const RiwayatSaldo = await RiwayatTopup.findAll({
-      include: [
-        {
-          model: User,
-          attributes: ["name", "email"],
-        },
-      ],
-    });
-
-    const result = RiwayatSaldo.map((item) => {
-      return {
-        id: item.id,
-        userId: item.userId,
-        name: item.User.name,
-        email: item.User.email,
-        saldoIuranWajib: item.saldoIuranWajib,
-        saldoIuranSukarela: item.saldoIuranSukarela,
-        createdAt: item.createdAt,
-      };
-    });
-
-    return res
-      .status(200)
-      .json(utils.apiSuccess("Berhasil mengambil riwayat topup", result));
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
-  }
-};
+  const RiwayatTopUp = async (req, res) => {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = (page - 1) * limit;
+  
+      const { count, rows: RiwayatSaldo } = await RiwayatTopup.findAndCountAll({
+        include: [
+          {
+            model: User,
+            attributes: ["name", "email"],
+          },
+        ],
+        order: [['createdAt', 'DESC']],
+        limit: limit,
+        offset: offset,
+      });
+  
+      const result = RiwayatSaldo.map((item) => {
+        return {
+          id: item.id,
+          userId: item.userId,
+          name: item.User.name,
+          email: item.User.email,
+          saldoIuranWajib: item.saldoIuranWajib,
+          saldoIuranSukarela: item.saldoIuranSukarela,
+          createdAt: item.createdAt,
+        };
+      });
+  
+      return res.status(200).json(utils.apiSuccess("Berhasil mengambil riwayat topup", {
+        totalItems: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        data: result
+      }));
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
+    }
+  };
 
 const saldoUser = async (req, res) => {
   try {
@@ -356,13 +365,20 @@ const PencairanDana = async (req, res) => {
 
 const getRiwayatPencairan = async (req, res) => {
   try {
-    const riwayatPencairan = await RiwayatPencairan.findAll({
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: riwayatPencairan } = await RiwayatPencairan.findAndCountAll({
       include: [
         {
           model: User,
           attributes: ["name", "email"],
         },
       ],
+      order: [['createdAt', 'DESC']],
+      limit: limit,
+      offset: offset,
     });
 
     const result = riwayatPencairan.map((item) => {
@@ -377,7 +393,12 @@ const getRiwayatPencairan = async (req, res) => {
       };
     });
 
-    return res.status(200).json(utils.apiSuccess("Berhasil mengambil riwayat pencairan", result));
+    return res.status(200).json(utils.apiSuccess("Berhasil mengambil riwayat pencairan", {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      data: result
+    }));
   } catch (error) {
     console.log(error);
     return res.status(500).json(utils.apiError("Kesalahan pada internal server."));
