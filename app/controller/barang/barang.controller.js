@@ -1,6 +1,7 @@
 const utils = require("../../../utils/utils");
 const ImageKitFile = require("../../../utils/ImageKit");
 const { Barang, Kategori, statusStok, User,statusAnggota } = require("../../models");
+const { logAction,getCurrentTime } = require('../../../utils/Logging');
 const { Op, or } = require('sequelize');
 
 exports.tambahBarang = async (req, res) => {
@@ -41,7 +42,7 @@ exports.tambahBarang = async (req, res) => {
       statusStokId,
       urlGambar: uploadFile.url,
     });
-
+    await logAction(userId, 'Menambah Barang', new Date(), getCurrentTime());
     res.status(201).json(utils.apiSuccess("Barang berhasil ditambahkan", barangBaru));
   } catch (error) {
     console.log(error);
@@ -62,7 +63,7 @@ exports.hapusBarang = async (req, res) => {
       return res.status(404).json(utils.apiError("Barang tidak ditemukan"));
     }
 
-    console.log(`User ID: ${userId}, User Role: ${userRole}, Barang User ID: ${barang.userId}`);
+    // console.log(`User ID: ${userId}, User Role: ${userRole}, Barang User ID: ${barang.userId}`);
     
     if (barang.userId !== userId && userRole !== 4 && userRole !== 3) {
       return res.status(403).json(utils.apiError("Anda tidak memiliki izin untuk menghapus barang ini"));
@@ -84,12 +85,17 @@ exports.hapusBarang = async (req, res) => {
       where: { id: barangId }
     });
 
+    // const now = new Date();
+    // const currentTime = getCurrentTime(); // Get the current time in HH:MM:SS format
+    await logAction(userId, 'Menghapus Barang', new Date(), getCurrentTime());
+
     res.status(200).json(utils.apiSuccess("Barang dan gambar berhasil dihapus"));
   } catch (error) {
     console.error(error);
     res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
   }
 };
+
 exports.getSemuaBarang = async (req, res) => {
   try {
     const { id, nama, kategori, page = 1, limit = 10, statusStokFilter } = req.query;
@@ -345,6 +351,7 @@ exports.getBarangPenjual = async (req, res) => {
       if (statusStokId !== undefined) barang.statusStokId = statusStokId;
   
       await barang.save();
+      await logAction(userId, 'Mengedit Barang', new Date(), getCurrentTime());
       res.status(200).json(utils.apiSuccess("Barang berhasil diperbarui", barang));
     } catch (error) {
       console.log(error);

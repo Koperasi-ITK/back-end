@@ -14,7 +14,7 @@ module.exports = {
         allowNull: false,
       },
       barangId: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
         allowNull: false,
       },
       jumlah: {

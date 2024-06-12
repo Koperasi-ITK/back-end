@@ -13,7 +13,7 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       barangId: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
         allowNull: false,
       },
       jumlah: {

@@ -1,22 +1,38 @@
+// models/logging.js
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Logging extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
+      Logging.belongsTo(models.User, {
+        foreignKey: 'userId',
+      });
     }
   }
   Logging.init({
-    name: DataTypes.STRING,
-    price: DataTypes.FLOAT,
-    stock: DataTypes.INTEGER
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    status: {
+      type: DataTypes.STRING,
+    },
+    tanggal: {
+      type: DataTypes.DATE,
+    },
+    waktu: {
+      type: DataTypes.TIME,
+      field: 'Waktu'
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    }
   }, {
     sequelize,
     modelName: 'Logging',

@@ -13,13 +13,13 @@ module.exports = {
         type: Sequelize.INTEGER,
       },
       status: {
-        type: Sequelize.FLOAT,
+        type: Sequelize.STRING,
       },
       tanggal: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.DATE,
       },
       Waktu: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.TIME,
       },
       createdAt: {
         allowNull: false,

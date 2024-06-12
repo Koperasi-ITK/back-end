@@ -18,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
   }
   itemKeranjang.init(
     {
-      barangId: DataTypes.INTEGER,
+      barangId: DataTypes.UUID,
       keranjangId: {
         type: DataTypes.INTEGER,
         allowNull: false,

@@ -2,8 +2,9 @@ const router = require("express").Router();
 const transaksicontroller = require("../controller/transaksi/transaksi.controller");
 const { verifyToken } = require("../middleware/authMiddleware");
 const verifyRole = require("../middleware/checkRole");
+const checkStatus = require("../middleware/checkStatusAnggota");
 
-router.post("/checkout", verifyToken, verifyRole(1), transaksicontroller.checkout);
+router.post("/checkout", verifyToken, verifyRole(1),checkStatus, transaksicontroller.checkout);
 router.post("/cancel", verifyToken, verifyRole(1), transaksicontroller.cancelCheckout);
 router.get(
   "/gettransaksi/:statusPengiriman?/:transaksiId?",

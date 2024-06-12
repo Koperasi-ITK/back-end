@@ -1,5 +1,5 @@
 const utils = require("../../utils/utils");
-const { User, Saldo , statusAnggota} = require("../models");
+const { User, Saldo , statusAnggota } = require("../models");
 
 const register = async (req, res, next) => {
   try {
@@ -11,7 +11,7 @@ const register = async (req, res, next) => {
       },
     });
 
-    if (checkEmail) return res.status(409).json(utils.apiError("Email telah terdaftar"));
+    if (checkEmail) return res.status(409).json(utils.apiError("Gunakan Email Lain"));
 
     // const checkStatus = await statusAnggota.findOne({
     //   where: {

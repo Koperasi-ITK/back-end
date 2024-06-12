@@ -2,6 +2,7 @@ const {Pendapatan,Keranjang,itemKeranjang,Barang,Transaksi,detailTransaksi,User,
 const utils = require("../../../utils/utils");
 const { Op } = require('sequelize');
 const barang = require("../../models/barang");
+const { logAction,getCurrentTime } = require('../../../utils/Logging');
 
 exports.checkout = async (req, res) => {
   const userId = res.locals.user.id;
@@ -98,7 +99,7 @@ exports.checkout = async (req, res) => {
       }
       await itemKeranjang.destroy({ where: { keranjangId: keranjang.id } });
       await Keranjang.destroy({ where: { id: keranjang.id } });
-
+      await logAction(userId, 'CheckOut Pemesanan', new Date(), getCurrentTime());
       return res.status(200).json(utils.apiSuccess("Checkout berhasil. Saldo telah diperbarui, dan detail transaksi tersimpan.", transaksi));
   } catch (error) {
       console.error(error);
@@ -152,7 +153,7 @@ exports.cancelCheckout = async (req, res) => {
       // });
 
       await transaksi.update({ statusPengirimanId: cancelledStatus.id });
-
+      await logAction(userId, 'Cancel Pemesanan', new Date(), getCurrentTime());
       return res.status(200).json(utils.apiSuccess("Pembatalan checkout berhasil. Saldo dan stok barang telah dikembalikan."));
   } catch (error) {
       console.error(error);
@@ -360,7 +361,7 @@ exports.BarangDiterima = async (req, res) => {
     await transaksi.save();
 
     await distributeFunds(transaksiId);
-
+    await logAction(userId, 'Konfirmasi Barang Telah Diterima', new Date(), getCurrentTime());
     return res.status(200).json({ message: "Konfirmasi penerimaan berhasil." });
   } catch (error) {
     console.error(error);
@@ -495,7 +496,7 @@ exports.getAllTransaksi = async (req, res) => {
 //cancel co by pegawai
 exports.cancelCheckoutByEmployee = async (req, res) => {
   const { transaksiId } = req.body;
-  console.log("ini :",transaksiId)
+  const userId = res.locals.user.id;
   try {
       const transaksi = await Transaksi.findOne({
           where: { id: transaksiId }
@@ -533,7 +534,7 @@ exports.cancelCheckoutByEmployee = async (req, res) => {
       await saldo.save();
 
       await transaksi.update({ statusPengirimanId: cancelledStatus.id });
-
+      await logAction(userId, 'Membatalkan Pemesanan', new Date(), getCurrentTime());
       return res.status(200).json(utils.apiSuccess("Pembatalan checkout berhasil oleh pegawai. Saldo dan stok barang telah dikembalikan."));
   } catch (error) {
       console.error(error);
@@ -543,6 +544,7 @@ exports.cancelCheckoutByEmployee = async (req, res) => {
 
 exports.updateStatusPengiriman = async (req, res) => {
   const { transaksiId, newStatus, newAlamatPengiriman } = req.body;
+  const userId = res.locals.user.id;
 
   try {
     if (!transaksiId || (!newStatus && !newAlamatPengiriman)) {
@@ -581,7 +583,7 @@ exports.updateStatusPengiriman = async (req, res) => {
     }
 
     await transaksi.save();
-
+    await logAction(userId, 'update status pengiriman pesanan', new Date(), getCurrentTime());
     return res.status(200).json(utils.apiSuccess("Status pengiriman berhasil diperbarui.", transaksi));
   } catch (error) {
     console.error(error);

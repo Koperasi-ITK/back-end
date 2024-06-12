@@ -4,6 +4,7 @@ const { where } = require("sequelize");
 const filter = require("../../utils/filter");
 const statusanggota = require("../models/statusanggota");
 const { Op } = require("sequelize");
+const { logAction,getCurrentTime } = require('../../utils/Logging');
 
 const getUser = async (req, res) => {
   try {
@@ -186,6 +187,7 @@ const getUserByRole = async (req, res) => {
 };
 
 const deleteUser = async (req, res) => {
+  const userId = res.locals.user.id;
   try {
     const { id } = req.params;
 
@@ -213,7 +215,7 @@ const deleteUser = async (req, res) => {
 
     if (!statusDihapus) return res.status(404).json(utils.apiError("Status 'Dihapus' tidak ditemukan"));
     await User.update({ statusAnggotaId: statusDihapus.id }, { where: { id: user.id } });
-
+    await logAction(userId, 'menghapus user', new Date(), getCurrentTime());
     return res.status(201).json(utils.apiSuccess(`Berhasil mengubah status ${role.roleName} menjadi Dihapus`));
   } catch (error) {
     console.log(error);
@@ -222,6 +224,7 @@ const deleteUser = async (req, res) => {
 };
 
 const updateAktor = async (req, res) => {
+  const userId = res.locals.user.id;
   try {
     const { id } = req.params;
     const {
@@ -258,13 +261,14 @@ const updateAktor = async (req, res) => {
       updatedUserFields.password = hashPassword;
     }
     if (noTelp !== undefined) updatedUserFields.noTelp = noTelp;
-    if (AktifSampai !== undefined && statusAnggotaId === undefined) updatedUserFields.AktifSampai = AktifSampai;
+
+    if (AktifSampai !== undefined) {
+      updatedUserFields.AktifSampai = AktifSampai;
+    }
 
     if (statusAnggotaId !== undefined && statusAnggotaId !== user.statusAnggotaId) {
-      await User.update({ AktifSampai: null }, { where: { id: user.id } });
-      await User.update({ statusAnggotaId: statusAnggotaId }, { where: { id: user.id } });
-    } else if (statusAnggotaId !== undefined) {
       updatedUserFields.statusAnggotaId = statusAnggotaId;
+      updatedUserFields.AktifSampai = null;
     }
 
     await User.update(updatedUserFields, { where: { id: user.id } });
@@ -277,7 +281,7 @@ const updateAktor = async (req, res) => {
     await Saldo.update(updatedSaldoFields, { where: { userId: saldo.userId } });
 
     const role = await Role.findByPk(user.roleId);
-
+    await logAction(userId, 'update data user', new Date(), getCurrentTime());
     return res.status(200).json(utils.apiSuccess(`${role.roleName} berhasil diupdate`));
   } catch (error) {
     console.log(error);
@@ -305,7 +309,7 @@ const updateProfile = async (req, res) => {
         },
       }
     );
-
+    await logAction(userId, 'update nomor telpon', new Date(), getCurrentTime());
     return res.status(200).json(utils.apiSuccess("Berhasil update Nomor Telpon"));
   } catch (error) {
     console.log(error);

@@ -1,4 +1,5 @@
 const { where } = require("sequelize");
+const { logAction,getCurrentTime } = require('../../../utils/Logging');
 const utils = require("../../../utils/utils"),
   { Saldo, User, RiwayatTopup,Pendapatan, Biaya,Transaksi,metodePengiriman,statusPengiriman,detailTransaksi, Barang,RiwayatPencairan  } = require("../../models");
 
@@ -262,13 +263,14 @@ const editBiaya = async (req, res) => {
     biaya.BiayaIuranBulanan = BiayaIuranBulanan !== undefined ? BiayaIuranBulanan : biaya.BiayaIuranBulanan;
 
     await biaya.save();
-
+    await logAction(userId, 'Mengedit Biaya Antar atau Iuran Bulanan', new Date(), getCurrentTime());
     return res.status(200).json(utils.apiSuccess("Biaya berhasil diupdate", biaya));
   } catch (error) {
     console.log(error);
     return res.status(500).json(utils.apiError("Kesalahan pada internal server error"));
   }
 };
+
 const getBiaya = async (req, res) => {
   try {
     const biaya = await Biaya.findAll();

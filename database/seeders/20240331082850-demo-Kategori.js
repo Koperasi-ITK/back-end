@@ -7,23 +7,9 @@ module.exports = {
       "Kategoris",
       [
         {
-          namaKategori: "Elektronik",
-          image: "elektronik.jpg",
-          potonganHarga: 10,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          namaKategori: "Pakaian",
-          image: "pakaian.jpg",
-          potonganHarga: 15,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          namaKategori: "Makanan",
-          image: "makanan.jpg",
-          potonganHarga: 5,
+          namaKategori: "Makanan Berat",
+          image: "https://ik.imagekit.io/xoh0kfeiy/pngtree-illustration-of-burger-and-soft-drink-takeout-vector-design-food-logo-png-image_7963593_tgcOFE72w.png",
+          potonganHarga: 1000,
           createdAt: new Date(),
           updatedAt: new Date()
         }

@@ -2,10 +2,12 @@ const utils = require("../../../utils/utils");
 const ImageKitFile = require("../../../utils/ImageKit");
 const { Kategori } = require("../../models");
 const { where } = require("sequelize");
+const { logAction,getCurrentTime } = require('../../../utils/Logging');
 
 const createCategory = async (req, res) => {
   try {
     const image = req.file;
+    const userId = res.locals.user.id;
 
     if (typeof image === "undefined")
       return res.status(422).json(utils.apiError("Gambar tidak boleh kosong"));
@@ -32,7 +34,7 @@ const createCategory = async (req, res) => {
       image: uploadFile.url,
       potonganHarga: potonganHarga,
     });
-
+    await logAction(userId, 'Menambah Category', new Date(), getCurrentTime());
     return res.status(200).json(utils.apiSuccess("Berhasil menambah kategori"));
   } catch (error) {
     console.log(error);
@@ -57,6 +59,7 @@ const getAll = async (req, res) => {
 const deleteCategory = async (req, res) => {
   try {
     const id = req.params.id;
+    const userId = res.locals.user.id;
     const checkCategory = await Kategori.findByPk(id);
 
     // console.log(checkCategory.image);
@@ -75,7 +78,7 @@ const deleteCategory = async (req, res) => {
         id: id,
       },
     });
-
+    await logAction(userId, 'Menghapus Category', new Date(), getCurrentTime());
     return res.status(200).json(utils.apiSuccess("Berhasil Menghapus Kategori"));
   } catch (error) {
     console.log(error);
@@ -86,6 +89,7 @@ const deleteCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = res.locals.user.id;
     const { namaKategori, potonganHarga } = req.body;
     const image = req.file;
     const checkCategory = await Kategori.findOne({ where: { id: id } });
@@ -147,7 +151,7 @@ const updateCategory = async (req, res) => {
     };
     
     await Kategori.update(updateData, { where: { id: id } });
-    
+    await logAction(userId, 'Mengupdate Category', new Date(), getCurrentTime());
     return res.status(200).json(utils.apiSuccess("Berhasil Mengubah Kategori"));
   } catch (error) {
     return res.status(500).json(utils.apiError("Kesalahan pada internal server", { error: error.message }));
