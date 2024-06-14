@@ -16,6 +16,8 @@ module.exports = (sequelize, DataTypes) => {
     {
       transaksiId: DataTypes.INTEGER,
       barangId: DataTypes.UUID,
+      namaBarang: DataTypes.STRING,
+      imageUrl: DataTypes.STRING,
       jumlah: DataTypes.INTEGER,
       hargaItem: DataTypes.INTEGER,
       totalHarga: DataTypes.INTEGER,

@@ -268,6 +268,7 @@ const getPendapatan = async (req, res) => {
 const editBiaya = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = res.locals.user.id;
     const { BiayaAntar, BiayaIuranBulanan } = req.body;
     console.log("ini biaya :",BiayaAntar," ini iuran:",BiayaIuranBulanan)
     const biaya = await Biaya.findByPk(id);

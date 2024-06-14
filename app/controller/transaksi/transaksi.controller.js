@@ -88,13 +88,15 @@ exports.checkout = async (req, res) => {
           const hargaFinal = item.Barang.harga + potonganHarga;
           await Barang.update({ stok: item.Barang.stok - item.jumlah }, { where: { id: item.barangId } });
           await detailTransaksi.create({
-              transaksiId: transaksi.id,
-              barangId: item.barangId,
-              jumlah: item.jumlah,
-              hargaItem: hargaFinal,
-              totalHarga: item.jumlah * hargaFinal,
-              createdAt: new Date(),
-              updatedAt: new Date()
+            transaksiId: transaksi.id,
+            barangId: item.barangId,
+            namaBarang: item.Barang.nama,
+            imageUrl: item.Barang.urlGambar,
+            jumlah: item.jumlah,
+            hargaItem: hargaFinal,
+            totalHarga: item.jumlah * hargaFinal,
+            createdAt: new Date(),
+            updatedAt: new Date()
           });
       }
       await itemKeranjang.destroy({ where: { keranjangId: keranjang.id } });
@@ -185,7 +187,7 @@ exports.getTransaksi = async (req, res) => {
             attributes: ['nama', 'harga', 'urlGambar'],
             include: [{ model: Kategori, attributes: ['potonganHarga'] }]
           }],
-          attributes: ['jumlah', 'hargaItem', 'totalHarga']
+          attributes: ['jumlah', 'hargaItem','namaBarang', 'totalHarga']
         },
         {
           model: statusPengiriman,
@@ -213,12 +215,12 @@ exports.getTransaksi = async (req, res) => {
         const potonganHarga = item.Barang.Kategori.potonganHarga || 0;
         const hargaFinal = item.Barang.harga + potonganHarga;
         return {
-          name: item.Barang.nama,
+          name: item.namaBarang,
           price: hargaFinal,
           ImageUrl: item.Barang.urlGambar,
           jumlah: item.jumlah,
-          HargaItem: hargaFinal,
-          totalHargaItem: item.jumlah * hargaFinal
+          HargaItem: item.hargaItem,
+          totalHargaItem: item.jumlah * item.hargaItem
         }
       }),
       StatusPengiriman: transaction.statusPengiriman.statusPengirimanName,
@@ -400,7 +402,7 @@ exports.getAllTransaksi = async (req, res) => {
       include: [
         {
           model: detailTransaksi,
-          attributes: ['jumlah', 'hargaItem', 'totalHarga'],
+          attributes: ['jumlah', 'hargaItem','namaBarang', 'totalHarga'],
           include: [
             {
               model: Barang,
@@ -462,12 +464,12 @@ exports.getAllTransaksi = async (req, res) => {
         const potonganHarga = item.Barang?.Kategori?.potonganHarga || 0;
         const hargaFinal = item.Barang?.harga + potonganHarga;
         return {
-          name: item.Barang?.nama || "Unknown Item",
-          price: hargaFinal,
+          name: item.namaBarang || "Unknown Item",
+          price: item.hargaItem,
           imageUrl: item.Barang?.urlGambar || "",
           jumlah: item.jumlah,
-          hargaItem: hargaFinal,
-          totalHargaItem: item.jumlah * hargaFinal,
+          hargaItem: item.hargaItem,
+          totalHargaItem: item.jumlah * item.hargaItem,
           seller: sellerMap[item.Barang?.userId] || "Unknown Seller"
         };
       }),

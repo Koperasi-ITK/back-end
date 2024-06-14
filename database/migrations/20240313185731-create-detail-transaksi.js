@@ -17,6 +17,14 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false,
       },
+      namaBarang: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      imageUrl: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
       jumlah: {
         type: Sequelize.INTEGER,
         allowNull: false,

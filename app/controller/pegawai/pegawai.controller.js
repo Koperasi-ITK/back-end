@@ -10,8 +10,9 @@ const {
   User,
   Pendapatan,
 } = require("../../models");
-
+const { Op } = require('sequelize');
 const ExcelJS = require('exceljs');
+const moment = require("moment");
 
 
 const pegawai = {
@@ -540,9 +541,34 @@ async updateBarang(req, res) {
 
 async exportExcel(req, res) {
   try {
+    const { startDate, endDate, statusPengirimanId } = req.query;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    let statusCondition;
+    let statusName;
+
+    if (statusPengirimanId === "all") {
+      statusCondition = { [Op.in]: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] };
+      statusName = "semua_transaksi";
+    } else if (statusPengirimanId == 8) {
+      statusCondition = { [Op.eq]: 8 };
+      statusName = "transaksi_selesai";
+    } else if (statusPengirimanId == 12) {
+      statusCondition = { [Op.eq]: 12 };
+      statusName = "transaksi_dibatalkan";
+    } else {
+      statusCondition = { [Op.in]: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] };
+      statusName = "semua_transaksi";
+    }
+
     const allTransaksi = await Transaksi.findAll({
       where: {
-        statusPengirimanId: [8, 12],
+        statusPengirimanId: statusCondition,
+        createdAt: {
+          [Op.between]: [start, end],
+        },
       },
       include: [
         {
@@ -571,7 +597,7 @@ async exportExcel(req, res) {
     });
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Transaksi Selesai');
+    const worksheet = workbook.addWorksheet(`${statusName}`);
 
     worksheet.columns = [
       { header: 'Nama', key: 'nama_pengguna', width: 15 },
@@ -580,6 +606,7 @@ async exportExcel(req, res) {
       { header: 'Status Pengiriman', key: 'status_pengiriman', width: 20 },
       { header: 'Alamat Pengiriman', key: 'alamat_pengiriman', width: 20 },
       { header: 'Total Harga', key: 'total_harga', width: 15 },
+      { header: 'Tanggal', key: 'tanggal', width: 15 },
     ];
 
     worksheet.getRow(1).eachCell(cell => {
@@ -624,12 +651,15 @@ async exportExcel(req, res) {
       totalUang += transaksi.totalHarga ?? 0;
 
       const row = worksheet.addRow({
-        nama_pengguna: User?.name ?? 'Undefined',
+        nama_pengguna: User?.name ?? "Undefined",
         detail_barang: detailBarangString,
-        metode_pengiriman: metodePengiriman?.metodePengirimanName ?? 'Undefined',
-        status_pengiriman: statusPengiriman?.statusPengirimanName ?? 'Undefined',
-        alamat_pengiriman: transaksi.alamatPengiriman ?? 'Undefined',
+        metode_pengiriman:
+          metodePengiriman?.metodePengirimanName ?? "Undefined",
+        status_pengiriman:
+          statusPengiriman?.statusPengirimanName ?? "Undefined",
+        alamat_pengiriman: transaksi.alamatPengiriman ?? "Undefined",
         total_harga: transaksi.totalHarga ?? 0,
+        tanggal: moment(transaksi.createdAt).format("YYYY-MM-DD") ?? "undefined",
       });
 
       row.eachCell({ includeEmpty: true }, cell => {
@@ -642,22 +672,74 @@ async exportExcel(req, res) {
       });
     });
 
+     if (statusPengirimanId == 8) {
+
     const summaryWorksheet = workbook.addWorksheet('Summary');
 
     summaryWorksheet.columns = [
-      { header: 'Total Transaksi', key: 'total_transaksi', width: 20 },
-      { header: 'Total Uang', key: 'total_uang', width: 20 },
       { header: 'Barang Terjual', key: 'barang_terjual', width: 30 },
       { header: 'Jumlah', key: 'jumlah', width: 10 },
-      { header: 'Total', key: 'total', width: 15 },
-    ];
+      { header: 'Total', key: 'total', width: 15},
+      ];
+      summaryWorksheet.getRow(1).eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFFFFF" },
+        };
+        cell.font = {
+          color: { argb: "FFFFFF" },
+        };
+        cell.border = {
+          top: { style: "none" },
+          left: { style: "none" },
+          bottom: { style: "none" },
+          right: { style: "none" },
+        };
+      });
 
-    const summaryRow = summaryWorksheet.addRow({
-      total_transaksi: totalTransaksi,
-      total_uang: totalUang,
+      
+      const totalTransaksiRow = summaryWorksheet.addRow({
+        barang_terjual: 'Total Transaksi',
+        total: totalTransaksi,
+      });
+      summaryWorksheet.mergeCells(`A${totalTransaksiRow.number}:B${totalTransaksiRow.number}`);
+
+    totalTransaksiRow.getCell('barang_terjual').alignment = { horizontal: 'center' };
+    totalTransaksiRow.getCell('barang_terjual').fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'D3D3D3' },
+    };
+    totalTransaksiRow.getCell('total').fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'D3D3D3' },
+    };
+
+    totalTransaksiRow.eachCell({ includeEmpty: true }, cell => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
     });
 
-    summaryRow.eachCell({ includeEmpty: true }, cell => {
+    summaryWorksheet.addRow({});
+
+    const headerRow = summaryWorksheet.addRow({
+      barang_terjual: 'Barang Terjual',
+      jumlah: 'Jumlah',
+      total: 'Total',
+    });
+
+    headerRow.eachCell(cell => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFF00' }, 
+      };
       cell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
@@ -683,8 +765,38 @@ async exportExcel(req, res) {
       });
     });
 
+    summaryWorksheet.addRow({});
+
+    const totalUangRow = summaryWorksheet.addRow({
+      barang_terjual: 'Total Uang',
+      total: totalUang,
+    });
+
+    totalUangRow.getCell('barang_terjual').alignment = { horizontal: 'center' };
+    summaryWorksheet.mergeCells(`A${totalUangRow.number}:B${totalUangRow.number}`);
+
+    totalUangRow.eachCell({ includeEmpty: true }, cell => {
+      cell.font = {
+        color: { argb: "000000" },
+        bold: true,
+      };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+  }
+
+    const today = moment().format("YYYY-MM-DD");
+    const filename = `${statusName}_${today}.xlsx`;
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="transaksi_selesai.xlsx"');
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`
+    );
 
     await workbook.xlsx.write(res);
     res.end();
