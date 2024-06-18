@@ -113,7 +113,7 @@ exports.getSemuaBarang = async (req, res) => {
             model: statusAnggota,
             attributes: ['statusName'],
             where: {
-              statusName: 'Aktif'
+              statusName: 'Sudah Bayar'
             }
           }
         ],

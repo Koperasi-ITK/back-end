@@ -59,8 +59,8 @@ module.exports = {
       DECLARE activeStatusId INT;
       DECLARE inactiveStatusId INT;
 
-      SET activeStatusId = (SELECT id FROM statusAnggota WHERE statusName = 'Aktif');
-      SET inactiveStatusId = (SELECT id FROM statusAnggota WHERE statusName = 'Tidak Aktif');
+      SET activeStatusId = (SELECT id FROM statusAnggota WHERE statusName = 'Sudah Bayar');
+      SET inactiveStatusId = (SELECT id FROM statusAnggota WHERE statusName = 'Belum Bayar');
 
       IF NEW.AktifSampai IS NOT NULL THEN
         IF NEW.AktifSampai < NOW() THEN
