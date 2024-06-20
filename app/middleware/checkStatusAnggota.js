@@ -18,7 +18,7 @@ const checkStatus = async (req, res, next) => {
 
         const statusAnggotaName = user.statusAnggotum ? user.statusAnggotum.statusName : "Status tidak ditemukan";
 
-        if (statusAnggotaName !== "Aktif") {
+        if (statusAnggotaName !== "Sudah Bayar") {
             return res.status(403).json(utils.apiError("User status tidak aktif"));
         }
 
